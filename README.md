@@ -4,7 +4,7 @@ Referência jurídica do projeto: tudo o que o software precisa respeitar sobre 
 
 **Atualizado em 15/11/2026.** O tema está em movimento (ver [Pontos em aberto](#9-pontos-em-aberto)). Revisar este arquivo antes de cada decisão de produto que dependa de regra legal.
 
-> **Aviso.** Este documento é um resumo de trabalho, não parecer jurídico. As regras da EC 141/2026 foram conferidas no texto do Planalto; a cautelar do STF foi conferida apenas em notícias e artigos de escritórios (não no texto da decisão); os artigos da CLT e leis anteriores foram escritos de memória e **precisam ser conferidos no texto oficial** antes de virar regra de código. Cada seção indica seu grau de confiança. Antes de lançar, um advogado trabalhista deve revisar.
+> **Aviso.** Este documento é um resumo de trabalho, não parecer jurídico. A EC 141/2026, a CLT, a Lei 605/1949, a Lei 10.101/2000, a LC 150/2015 e o art. 7º da Constituição foram conferidos no texto do Planalto em 15/11/2026 (o conteúdo aqui é paráfrase, não transcrição). A cautelar do STF foi conferida na notícia oficial do STF e em artigos de escritórios, não no texto da decisão. Súmulas do TST, portarias do MTE e valores de multa foram conferidos **apenas em fontes secundárias**. Cada seção indica seu grau de confiança. Antes de lançar, um advogado trabalhista deve revisar.
 
 ---
 
@@ -18,7 +18,7 @@ Referência jurídica do projeto: tudo o que o software precisa respeitar sobre 
 - Vale para **contratos em vigor**, não só para novas contratações.
 - Vale hoje para **empresas de todos os portes**. A emenda permite uma lei complementar com medidas transitórias para MEI, ME e EPP, mas essa lei **ainda não existe**.
 - A 6x1 não ficou absolutamente proibida: **convenção ou acordo coletivo** pode criar regime compensatório (ver [3.2](#32-regime-compensatório-por-negociação-coletiva)). Sem instrumento coletivo, a regra é 5x2.
-- O STF (min. Flávio Dino, ADIs 8.041 e 8.042) concedeu **cautelar parcial em 12/11/2026** que manteve o cronograma e flexibilizou pontos da transição. O referendo pelo Plenário estava em julgamento virtual de 13 a 16/11/2026 — **resultado ainda não conhecido**.
+- O STF (min. Flávio Dino, ADIs 8.041 e 8.042) concedeu **cautelar parcial em 12/11/2026** que manteve o cronograma e flexibilizou pontos da transição. O referendo no Plenário Virtual chegou a 4x0 a favor, mas em 14/11/2026 o min. Fux pediu destaque: o placar zerou e o caso vai ao plenário físico, **sem data**. A liminar segue valendo.
 
 ### Linha do tempo
 
@@ -38,7 +38,7 @@ As datas de 16/12 são cálculo a partir de "2 meses após a publicação"; a co
 
 ## 2. Como era (até 15/12/2026)
 
-*Confiança: média — escrito de memória, conferir no texto oficial.*
+*Confiança: alta — conferido no Planalto.*
 
 | Regra | Base |
 |---|---|
@@ -55,7 +55,7 @@ As datas de 16/12 são cálculo a partir de "2 meses após a publicação"; a co
 ### 3.1 Nova redação do art. 7º da Constituição
 
 - **Inciso XIII** — duração normal do trabalho não superior a **8 horas diárias e 40 horas semanais**; compensação de horários e redução de jornada **mediante acordo ou convenção coletiva**.
-- **Inciso XV** — repouso semanal remunerado de **2 dias**, um dos quais preferencialmente aos domingos.
+- **Inciso XV** — repouso semanal remunerado de **2 dias**, um dos quais preferencialmente aos domingos. Só vigora em 16/12/2026; até lá, o texto consolidado da Constituição ainda mostra a redação antiga com a marca "Vide EC 141/2026 — Vigência".
 - **§ 1º** — antigo parágrafo único (direitos dos domésticos), apenas renumerado. Como ele estende os incisos XIII e XV aos domésticos, a mudança os alcança.
 - **§ 2º** — regime compensatório por negociação coletiva (ver 3.2).
 - **§ 3º** — lei poderá criar regimes diferenciados, respeitados os limites dos incisos XIII, XIV e XV.
@@ -93,7 +93,7 @@ O texto não trata de: hora extra, banco de horas, 12x36, atividades essenciais,
 
 ## 4. Cautelar do STF (ADIs 8.041 e 8.042)
 
-*Confiança: média-baixa — baseado em notícias e artigos de escritórios, não no texto da decisão. Decisão monocrática, pendente de referendo do Plenário; a Câmara pediu que seis pontos não sejam referendados. **Não codificar como regra permanente.***
+*Confiança: média — baseado na notícia oficial do STF e em artigos de escritórios, não no texto da decisão. Decisão monocrática, pendente de referendo: o julgamento virtual chegou a 4x0 (Dino, Moraes, Cármen Lúcia, Gilmar), mas o destaque do min. Fux em 14/11/2026 zerou o placar e levou o caso ao plenário físico, sem data. A liminar segue valendo; a Câmara pediu que seis pontos não sejam referendados. **Não codificar como regra permanente.***
 
 Autoras: CNC (8.041) e CNI (8.042). Relator: min. Flávio Dino. Em 05/11/2026 a cautelar foi negada e marcada conciliação para 10/11; em 12/11/2026 foi concedida em parte.
 
@@ -116,7 +116,7 @@ Fontes divergem em detalhes (se o item 10 é "apelo" ou "determinação"; gatilh
 
 ## 5. Regras anteriores que continuam valendo
 
-*Confiança: média — escrito de memória. A EC não revogou nada disso expressamente; onde houver conflito com os novos limites, prevalece a Constituição. Conferir cada artigo no texto consolidado da CLT antes de implementar.*
+*Confiança: alta para CLT, Lei 605/1949, Lei 10.101/2000 e LC 150/2015 (conferidas no Planalto em 15/11/2026; nenhum dos artigos citados tinha alteração de 2026). Média para súmulas do TST e portarias (fontes secundárias). A EC não revogou nada disso expressamente; onde houver conflito com os novos limites, prevalece a Constituição.*
 
 ### 5.1 Jornada e horas extras
 
@@ -124,14 +124,15 @@ Fontes divergem em detalhes (se o item 10 é "apelo" ou "determinação"; gatilh
 |---|---|
 | Hora extra com adicional mínimo de 50% | CF, art. 7º, XVI |
 | Até 2 horas extras por dia | CLT, art. 59 |
-| Tolerância de ponto: 5 min por marcação, máx. 10 min por dia | CLT, art. 58, § 1º |
-| Banco de horas anual: só por negociação coletiva | CLT, art. 59, § 2º |
+| Tolerância de ponto: variações de até 5 min, limite de 10 min por dia | CLT, art. 58, § 1º |
+| Banco de horas anual: só por negociação coletiva, sem passar de 10h diárias | CLT, art. 59, § 2º |
 | Banco de horas semestral: acordo individual escrito | CLT, art. 59, § 5º |
 | Compensação no mesmo mês: acordo individual, tácito ou escrito | CLT, art. 59, § 6º |
 | Turnos ininterruptos de revezamento: 6h, salvo negociação coletiva | CF, art. 7º, XIV |
 | Tempo parcial: até 30h/semana sem extras, ou até 26h com até 6 extras | CLT, art. 58-A |
 | Excluídos do controle de jornada: externos incompatíveis com controle, cargos de gestão, teletrabalho por produção/tarefa | CLT, art. 62 |
-| Menores de 18: em regra sem horas extras | CLT, art. 413 |
+| Compensação irregular: se o teto semanal não foi ultrapassado, deve-se só o adicional; horas extras habituais não descaracterizam o acordo | CLT, art. 59-B |
+| Menores de 18: proibido prorrogar a jornada, salvo até 2h por negociação coletiva com compensação, ou força maior (até 12h, adicional ≥ 25%) | CLT, art. 413 |
 
 > **Controvérsia aberta.** O novo inciso XIII fala em compensação "mediante acordo ou convenção coletiva" — redação que já existia e que a jurisprudência (Súmula 85 do TST) e a CLT (art. 59, §§ 5º e 6º) leem como admitindo acordo individual. Há doutrina sustentando que, após a EC, só o coletivo vale. Sem decisão dos tribunais. **Tratar acordo individual de compensação como risco configurável, não como certeza.**
 
@@ -148,51 +149,54 @@ Fontes divergem em detalhes (se o item 10 é "apelo" ou "determinação"; gatilh
 
 | Regra | Base |
 |---|---|
-| Repouso semanal de 24h consecutivas, coincidindo com o domingo salvo necessidade | CLT, art. 67; Lei 605/1949 |
-| Trabalho aos domingos exige escala de revezamento | CLT, art. 67, parágrafo único |
-| Comércio: repouso deve cair no domingo ao menos **1 vez a cada 3 semanas**, respeitada a lei municipal | Lei 10.101/2000, art. 6º |
-| Mulheres: revezamento **quinzenal** para o domingo (TST tem aplicado) | CLT, art. 386 |
+| Repouso semanal de 24h consecutivas, coincidindo com o domingo salvo conveniência pública ou necessidade imperiosa do serviço | CLT, art. 67; Lei 605/1949, art. 1º |
+| Trabalho aos domingos exige escala de revezamento organizada mensalmente | CLT, art. 67, parágrafo único |
+| Trabalho aos domingos depende de permissão prévia da autoridade do trabalho (dada de forma permanente a várias atividades pela Portaria 671) | CLT, art. 68; Portaria MTP 671/2021, art. 62 e Anexo IV |
+| Comércio em geral: domingo autorizado, respeitada a lei municipal; repouso deve cair no domingo ao menos **1 vez a cada 3 semanas** | Lei 10.101/2000, art. 6º |
+| Mulheres: revezamento **quinzenal** para o domingo. Sem tese vinculante, mas a SDI-1 e as Turmas do TST aplicam, com pagamento em dobro, e o TST anulou cláusula coletiva de 1x3 para mulheres | CLT, art. 386 |
 | Folga concedida só depois do 7º dia consecutivo de trabalho: paga em dobro | OJ 410 da SDI-1 do TST |
 | Domingo ou feriado trabalhado sem folga compensatória: pago em dobro | Lei 605/1949, art. 9º; Súmula 146 do TST |
-| Falta injustificada na semana: perde a remuneração do repouso | Lei 605/1949, art. 6º |
-| Feriados no comércio: exige convenção coletiva + lei municipal | Lei 10.101/2000, art. 6º-A |
-| Atividades com autorização permanente para domingos e feriados | Portaria MTP 671/2021 (anexo) |
+| Falta sem motivo justificado na semana: perde a remuneração do repouso (motivos justificados listados no § 1º) | Lei 605/1949, art. 6º |
+| Remuneração do repouso inclui horas extras habituais | Lei 605/1949, art. 7º |
+| Feriados no comércio em geral: exige convenção coletiva + lei municipal | Lei 10.101/2000, art. 6º-A |
+| Descumprir as regras de domingo/feriado no comércio: multa do art. 75 da CLT | Lei 10.101/2000, art. 6º-B |
 
 > **Em aberto.** Como a Lei 605/1949 (pensada para 1 repouso) se aplica a 2 repousos — por exemplo, se a falta injustificada tira a remuneração de um ou dos dois — ainda não foi decidido. O governo anunciou decreto sobre DSR.
 >
-> **Feriados no comércio.** A Portaria MTE 3.665/2023 (que retira o comércio da autorização permanente para feriados, exigindo convenção coletiva) foi adiada várias vezes; a última data conhecida era 26/05/2026. **Não confirmei se entrou em vigor.** Verificar antes de implementar regra de feriado.
+> **Feriados no comércio.** *(fontes secundárias)* A Portaria MTE 3.665/2023 entrou em vigor em 27/05/2026 e foi **revogada pela Portaria MTE 1.316, de 21/07/2026**. Pela 1.316, 15 atividades de comércio listadas no Anexo IV da Portaria 671 mantêm autorização permanente para feriados; o comércio em geral fora da lista depende de convenção coletiva. Há ação judicial sobre a exclusão dos supermercados, desfecho não verificado. Conferir a lista no DOU antes de implementar regra de feriado.
 
 ### 5.4 Trabalho noturno
 
 | Regra | Base |
 |---|---|
-| Urbano: 22h às 5h, adicional de 20%, hora noturna de 52min30s | CLT, art. 73 |
+| 22h às 5h, adicional de pelo menos 20%, hora noturna de 52min30s (trabalho rural tem lei própria, não conferida) | CLT, art. 73 |
 
 ### 5.5 Escala 12x36
 
-Admitida por acordo individual escrito, convenção ou acordo coletivo (CLT, art. 59-A). A EC não a menciona nem alterou o art. 59-A. Média semanal de 42h em ciclos de 12x36 passa a exceder o teto de 40h a partir de 16/12/2027. Há quem leia o § 2º do art. 7º como preservando o regime por negociação coletiva; não há definição. **Tratar como zona de risco até regulamentação.**
+Admitida por acordo individual escrito, convenção ou acordo coletivo; a remuneração mensal já cobre o descanso semanal e os feriados (CLT, art. 59-A). A EC não a menciona nem alterou o art. 59-A. Média semanal de 42h em ciclos de 12x36 passa a exceder o teto de 40h a partir de 16/12/2027. Há quem leia o § 2º do art. 7º como preservando o regime por negociação coletiva; não há definição. **Tratar como zona de risco até regulamentação.**
 
 ### 5.6 Empregados domésticos
 
-LC 150/2015 prevê 8h/44h e descanso semanal de 24h. Como o § 1º do art. 7º estende os incisos XIII e XV aos domésticos, os novos limites se aplicam; a LC ainda não foi adaptada.
+LC 150/2015 prevê 8h/44h com divisor 220 (art. 2º), compensação por acordo escrito, 12x36 por acordo escrito (art. 10), intervalo de 1h a 2h redutível a 30 min (art. 13), interjornada de 11h (art. 15) e descanso semanal de 24h (art. 16). Como o § 1º do art. 7º estende os incisos XIII e XV aos domésticos, os novos limites se aplicam; a LC ainda não foi adaptada.
 
 ### 5.7 Registro de ponto
 
-Obrigatório para estabelecimentos com **mais de 20 empregados** (CLT, art. 74, § 2º); regras de sistemas de ponto na Portaria MTP 671/2021. Abaixo disso não é obrigatório, mas o controle é a prova da empresa em reclamação trabalhista.
+Obrigatório para estabelecimentos com **mais de 20 trabalhadores**, em registro manual, mecânico ou eletrônico (CLT, art. 74, § 2º). Ponto por exceção é permitido por acordo individual escrito ou instrumento coletivo (§ 4º). Tipos de ponto eletrônico (REP-C, REP-A, REP-P) na Portaria MTP 671/2021, art. 75 em diante. Abaixo disso não é obrigatório, mas o controle é a prova da empresa em reclamação trabalhista.
 
 ### 5.8 Negociado sobre o legislado
 
-Convenção/acordo coletivo prevalece sobre a lei em jornada, banco de horas anual, intervalo (mín. 30 min), entre outros (CLT, art. 611-A), mas não pode suprimir o repouso semanal remunerado nem direitos constitucionais (CLT, art. 611-B). **A convenção coletiva da categoria do cliente é sempre parte da regra aplicável.**
+Convenção/acordo coletivo prevalece sobre a lei em jornada (dentro dos limites constitucionais), banco de horas anual, intervalo (mín. 30 min para jornadas acima de 6h), modalidade de registro de jornada e troca do dia de feriado, entre outros (CLT, art. 611-A, I, II, III, X, XI). Não pode suprimir nem reduzir o repouso semanal remunerado nem o adicional mínimo de 50% da hora extra (CLT, art. 611-B, IX e X). **A convenção coletiva da categoria do cliente é sempre parte da regra aplicável.**
 
 ### 5.9 Salário-hora e divisor
 
-Pelo raciocínio do art. 64 da CLT, o divisor mensal acompanha a jornada: 220 (44h) → **210 (42h)** → **200 (40h)**. Com salário mantido, o valor da hora normal e da hora extra **sobe**. A cautelar não tratou do divisor; o governo anunciou decreto sobre o tema, não publicado até 13/11/2026.
+O art. 64 da CLT manda dividir o salário mensal por 30 vezes a jornada diária; os divisores usados na prática vêm da jurisprudência: 220 para 44h e **200 para 40h** (Súmula 431 do TST). Para a fase de 42h, o divisor **210** é a extrapolação adotada pelos escritórios, ainda sem norma. Com salário mantido, o valor da hora normal e da hora extra **sobe**. A cautelar não tratou do divisor; o decreto anunciado pelo governo (com tabelas de divisores) não tinha sido publicado até 14/11/2026.
 
 ---
 
 ## 6. Micro e pequenos empregadores
 
-- **Não há regra diferenciada em vigor.** MEI (com seu único empregado), ME e EPP seguem o mesmo cronograma de todos.
+- **Não há regra diferenciada em vigor.** MEI, ME e EPP seguem o mesmo cronograma de todos.
+- O MEI só pode ter **um empregado**, que recebe salário mínimo ou o piso da categoria (LC 123/2006, art. 18-C).
 - O art. 5º da EC apenas **autoriza** lei complementar com medidas transitórias, condicionadas à manutenção de empregos. Não há prazo na emenda; a cautelar pediu ao Congresso que legisle em 180 dias (ponto contestado).
 - Na prática, o pequeno empregador sem sindicato atuante cai na regra padrão: **5x2**, com 42h (até 8h24/dia pela cautelar, se referendada) e depois 40h (8h/dia).
 - Para abrir 6 ou 7 dias por semana, as saídas legais são: revezamento de folgas entre empregados, contratação adicional/tempo parcial, ou regime compensatório via convenção coletiva.
@@ -221,9 +225,9 @@ Derivadas das seções acima. Cada uma deve ser parametrizada por **data de vig�
 
 - Folga após o 7º dia consecutivo: pagamento em dobro (OJ 410).
 - Domingo/feriado trabalhado sem compensação: em dobro.
-- Exigência habitual de jornada acima do limite: pode caracterizar falta grave do empregador (rescisão indireta).
+- Exigência habitual de jornada acima do limite: pode caracterizar falta grave do empregador (rescisão indireta — CLT, art. 483, "a" e "d").
 - Horas acima do novo teto sem compensação válida: horas extras com reflexos.
-- Multas administrativas da fiscalização do trabalho: existem (CLT, art. 75), mas **valores não levantados** nesta pesquisa.
+- Multa administrativa por infração às regras de duração do trabalho (CLT, art. 75) e de repouso (Lei 605/1949, art. 12): **R$ 41,61 a R$ 4.161,83**, em dobro na reincidência ou oposição à fiscalização. Valor de fonte secundária (Portaria MTP 667/2021 com a Portaria MTE 66/2024); conferir a portaria vigente.
 
 ---
 
@@ -233,14 +237,15 @@ Acompanhar — cada item pode mudar regra de produto:
 
 | Tema | Situação em 15/11/2026 |
 |---|---|
-| Referendo da cautelar pelo Plenário do STF | Em julgamento virtual (13–16/11/2026). Seis pontos contestados pela Câmara, inclusive as 8h24 sem acordo coletivo |
-| Decreto federal (divisor, DSR, coordenação de escalas, atividades contínuas) | Anunciado, não publicado até 13/11/2026 |
+| Referendo da cautelar pelo Plenário do STF | Destaque do min. Fux em 14/11/2026 zerou o placar (estava 4x0); vai ao plenário físico, sem data. Seis pontos contestados pela Câmara, inclusive as 8h24 sem acordo coletivo |
+| Decreto federal (divisor, DSR, mínimo de 8 folgas em 30 dias, atividades contínuas) | Anunciado, não publicado até 14/11/2026 |
 | Portaria conjunta MDIC/MEMP/MTE | Autorizada pela cautelar, não editada |
 | Lei complementar para MEI/ME/EPP | Não existe |
 | Lei de regimes diferenciados (essenciais, 12x36, setores específicos) | Não existe |
 | Adaptação da CLT, Lei 605/1949 e LC 150/2015 | Não feita |
 | Validade de compensação por acordo individual | Controvertida |
-| Portaria 3.665/2023 (feriados no comércio) | Situação após 26/05/2026 não verificada |
+| Feriados no comércio (Portaria MTE 1.316/2026) | Em vigor desde 22/07/2026; lista das 15 atividades e ação dos supermercados não conferidas em fonte oficial |
+| Súmulas do TST, portarias e multas | Conferidas só em fontes secundárias |
 
 ---
 
@@ -270,5 +275,24 @@ Acompanhar — cada item pode mudar regra de produto:
 **Feriados no comércio**
 - [MTE prorroga por 90 dias a regra sobre feriados — MTE, fev/2026](https://www.gov.br/trabalho-e-emprego/pt-br/noticias-e-conteudo/2026/fevereiro/governo-federal-prorroga-por-90-dias-regra-sobre-trabalho-em-feriados-no-comercio)
 
-**Legislação a conferir no texto consolidado (não lida nesta pesquisa)**
-- Constituição Federal, art. 7º · CLT (Decreto-Lei 5.452/1943) · Lei 605/1949 · Lei 10.101/2000 · LC 150/2015 · Portaria MTP 671/2021 · Portaria MTE 3.665/2023 · Súmulas 85 e 146 e OJ 410 da SDI-1 do TST
+- [Portaria regulamenta o trabalho no comércio durante os feriados (Portaria 1.316/2026) — COAD](https://www.coad.com.br/home/noticias-detalhe/138803/portaria-regulamenta-o-trabalho-no-comercio-durante-os-feriados)
+- [Portaria MTP 671/2021 consolidada — LegisWeb](https://www.legisweb.com.br/legislacao/?id=498446)
+
+**STF — referendo**
+- [STF mantém regra de transição para a jornada 5x2 — STF Notícias](https://noticias.stf.jus.br/postsnoticias/stf-mantem-regra-de-transicao-para-implementacao-da-jornada-5x2/)
+- [Jornada 5x2 no plenário do STF — Correio Braziliense](https://www.correiobraziliense.com.br/politica/2026/11/7538800-jornada-5-x-2-no-plenario-do-stf.html)
+
+**Legislação conferida no Planalto em 15/11/2026**
+- [Constituição Federal, art. 7º](https://www.planalto.gov.br/ccivil_03/constituicao/constituicao.htm)
+- [CLT — texto compilado](http://www.planalto.gov.br/ccivil_03/decreto-lei/Del5452compilado.htm)
+- [Lei 605/1949](https://www.planalto.gov.br/ccivil_03/leis/l0605.htm)
+- [Lei 10.101/2000](https://www.planalto.gov.br/ccivil_03/leis/l10101.htm)
+- [LC 150/2015](https://www.planalto.gov.br/ccivil_03/leis/lcp/lcp150.htm)
+- [LC 123/2006, art. 18-C](https://www.planalto.gov.br/ccivil_03/leis/lcp/lcp123.htm)
+
+**Jurisprudência e multas (fontes secundárias)**
+- [Súmula 85 do TST — Modelo Inicial](https://modeloinicial.com.br/lei/129815/sumulas-tst/num-85)
+- [Súmula 146 — notícia do TRT-3](https://portal.trt3.jus.br/internet/conheca-o-trt/comunicacao/noticias-juridicas/importadas-2011-2012/repouso-trabalhado-e-nao-compensado-deve-ser-pago-de-forma-simples-e-mais-a-dobra-27-08-2012-06-02-acs)
+- [OJ 410 da SDI-1 — notícia do TRT-3](https://portal.trt3.jus.br/internet/conheca-o-trt/comunicacao/noticias-juridicas/importadas-2017/repouso-apos-o-setimo-dia-trabalhado-e-considerado-nao-concedido-02-02-2017-06-02-acs)
+- [Folga quinzenal de empregadas aos domingos — TST](https://www.tst.jus.br/-/ministra-do-stf-mant%C3%A9m-decis%C3%A3o-do-tst-sobre-folga-quinzenal-de-empregadas-aos-domingos)
+- [Portaria MTE 66/2024 (multas) — Normas Legais](https://www.normaslegais.com.br/legislacao/portaria-mte-66-2024.htm)
