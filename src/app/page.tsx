@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { type Dia, dimensionar, minutosAbertos } from "@/regras/dimensionamento";
 import { VIGENCIAS } from "@/regras/parametros";
+import { CalendarioEscala } from "./escala";
 
 const NOMES = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 const PADRAO: Dia = { abre: "09:00", fecha: "18:00" };
@@ -40,6 +41,9 @@ export default function Home() {
   const [intervaloCoberto, setIntervaloCoberto] = useState(true);
   const [folgaDomingoACada, setFolgaDomingoACada] = useState<2 | 3>(3);
   const [cobrirFerias, setCobrirFerias] = useState(true);
+  const [feriados, setFeriados] = useState<"fecha" | "folga" | "dobro">("fecha");
+  const [afastamentos, setAfastamentos] = useState(0);
+  const [fase, setFase] = useState(VIGENCIAS.length - 1);
 
   function mudarDia(i: number, dia: Dia) {
     setDias(dias.map((d, j) => (j === i ? dia : d)));
@@ -52,6 +56,8 @@ export default function Home() {
     intervaloCoberto,
     folgaDomingoACada,
     cobrirFerias,
+    feriados,
+    afastamentos: afastamentos / 100,
   };
   const fases = VIGENCIAS.map((v) => dimensionar(funcionamento, v.inicio, { cautelarStf }));
   const [antes, , final] = fases;
@@ -177,6 +183,53 @@ export default function Home() {
             </fieldset>
           )}
 
+          <fieldset className="mt-5 border-t pt-5">
+            <legend className="float-left mb-3 w-full font-medium">Nos feriados nacionais</legend>
+            <div className="clear-both space-y-2 text-sm">
+              <Opcao
+                type="radio"
+                name="feriados"
+                checked={feriados === "fecha"}
+                onChange={() => setFeriados("fecha")}
+                titulo="A empresa fecha"
+                detalhe="São 9 feriados nacionais por ano; estaduais e municipais não entram."
+              />
+              <Opcao
+                type="radio"
+                name="feriados"
+                checked={feriados === "folga"}
+                onChange={() => setFeriados("folga")}
+                titulo="Abre e dá folga em outro dia"
+                detalhe="Soma quem cobre essas folgas. No comércio, abrir exige convenção coletiva."
+              />
+              <Opcao
+                type="radio"
+                name="feriados"
+                checked={feriados === "dobro"}
+                onChange={() => setFeriados("dobro")}
+                titulo="Abre e paga o dia em dobro"
+                detalhe="Não muda o tamanho da equipe, só o custo."
+              />
+            </div>
+          </fieldset>
+
+          <div className="mt-5 border-t pt-5">
+            <Label htmlFor="afastamentos">Equipe afastada em média (%)</Label>
+            <Input
+              id="afastamentos"
+              type="number"
+              min={0}
+              max={50}
+              className="mt-2 w-24"
+              value={afastamentos}
+              onChange={(e) => setAfastamentos(Number(e.target.value))}
+            />
+            <p className="mt-2 text-sm text-muted-foreground">
+              Atestados, licenças e faltas. Só soma gente quando o percentual equivale a pelo menos meia
+              pessoa.
+            </p>
+          </div>
+
           <div className="mt-5 space-y-2 border-t pt-5 text-sm">
             <Opcao
               type="checkbox"
@@ -203,8 +256,14 @@ export default function Home() {
               {final.minimo === 1 ? "funcionário CLT, no mínimo" : "funcionários CLT, no mínimo"}
             </p>
             <p className="mt-4 border-t border-primary-foreground/20 pt-4 text-sm opacity-90">
-              {final.paraFerias > 0 &&
-                `${final.emOperacao} em operação e ${final.paraFerias} para cobrir férias. `}
+              {final.minimo > final.emOperacao &&
+                `${final.emOperacao} em operação e ${final.minimo - final.emOperacao} de reserva (${[
+                  final.reserva.ferias && `${final.reserva.ferias} para férias`,
+                  final.reserva.feriados && `${final.reserva.feriados} para folgas de feriado`,
+                  final.reserva.afastamentos && `${final.reserva.afastamentos} para afastamentos`,
+                ]
+                  .filter(Boolean)
+                  .join(", ")}). `}
               {diferenca > 0
                 ? `${diferenca} a mais do que na regra antiga (${antes.minimo}).`
                 : "O mesmo número da regra antiga."}{" "}
@@ -213,30 +272,36 @@ export default function Home() {
           </div>
 
           <ol className="rounded-xl border bg-card p-5">
-            {fases.map((f) => (
-              <li
-                key={f.parametros.inicio}
-                className="flex items-baseline justify-between gap-4 border-b py-3 first:pt-0 last:border-b-0 last:pb-0"
-              >
-                <div>
-                  <p className="font-medium">{f.parametros.nome}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {horas(f.parametros.tetoSemanalMin)} por semana · {horas(f.parametros.tetoDiarioMin)} por
-                    dia · {f.parametros.repousosSemanais}{" "}
-                    {f.parametros.repousosSemanais === 1 ? "folga" : "folgas"}
-                  </p>
-                </div>
-                <p className="font-heading text-3xl tabular-nums">{f.minimo}</p>
+            {fases.map((f, i) => (
+              <li key={f.parametros.inicio} className="border-b py-1 first:pt-0 last:border-b-0 last:pb-0">
+                <button
+                  type="button"
+                  aria-pressed={i === fase}
+                  onClick={() => setFase(i)}
+                  className={`flex w-full items-baseline justify-between gap-4 rounded-lg px-3 py-2 text-left ${i === fase ? "bg-accent" : "hover:bg-muted"}`}
+                >
+                  <span>
+                    <span className="block font-medium">{f.parametros.nome}</span>
+                    <span className="block text-sm text-muted-foreground">
+                      {horas(f.parametros.tetoSemanalMin)} por semana · {horas(f.parametros.tetoDiarioMin)}{" "}
+                      por dia · {f.parametros.repousosSemanais}{" "}
+                      {f.parametros.repousosSemanais === 1 ? "folga" : "folgas"}
+                    </span>
+                  </span>
+                  <span className="font-heading text-3xl tabular-nums">{f.minimo}</span>
+                </button>
               </li>
             ))}
           </ol>
 
           <p className="text-sm text-muted-foreground">
-            {horas(final.coberturaMin)} de trabalho por semana. É um piso, sem horas extras: não monta a
-            escala e não considera faltas, feriados nem afastamentos.
+            {horas(final.coberturaMin)} de trabalho por semana, sem horas extras. Toque numa fase para ver a
+            escala dela abaixo.
           </p>
         </aside>
       </div>
+
+      <CalendarioEscala d={fases[fase]} />
     </main>
   );
 }

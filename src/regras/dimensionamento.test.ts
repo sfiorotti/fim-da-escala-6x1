@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { type Dia, dimensionar, type Funcionamento, minutosAbertos } from "./dimensionamento";
+import { validar } from "./escala";
 import { parametrosEm } from "./parametros";
 
 const NOVE_AS_SEIS: Dia = { abre: "09:00", fecha: "18:00" };
@@ -44,7 +45,6 @@ describe("dimensionamento", () => {
   });
 
   test("loja 6 dias: 2 funcionários antes da emenda", () => {
-    // 54h de cobertura / 44h = 2; 12 turnos / 6 dias = 2
     expect(dimensionar(loja, ANTES).minimo).toBe(2);
   });
 
@@ -55,35 +55,58 @@ describe("dimensionamento", () => {
     expect(d.limitante).toBe("dias de repouso");
   });
 
-  test("postos são cobertos em conjunto", () => {
-    // 27h por dia / 8h = 4 pessoas por dia; 24 turnos / 5 dias = 5
-    expect(dimensionar({ ...loja, postos: 3 }, FINAL).minimo).toBe(5);
+  test("aberto 24h todos os dias: turnos de 6h, e a escala pede mais gente que o piso", () => {
+    const d = dimensionar(sempreAberto, FINAL);
+    expect(d.turnosDaSemana[0].length).toBe(4);
+    expect(d.emOperacao).toBe(7);
+    expect(d.limitante).toBe("encaixe dos turnos");
   });
 
-  test("aberto 24h todos os dias, 1 posto, regra final", () => {
-    // 168h / 40h = 4,2 → 5; 21 turnos / 5 dias = 4,2 → 5
-    expect(dimensionar(sempreAberto, FINAL).minimo).toBe(5);
+  test("tudo fechado: nenhum funcionário", () => {
+    expect(dimensionar({ dias: Array(7).fill(null), postos: 1 }, FINAL).minimo).toBe(0);
   });
 });
 
 describe("intervalo de refeição (CLT, art. 71)", () => {
-  test("posto coberto: 8h de funcionamento exigem um substituto no intervalo", () => {
+  test("posto coberto, 1 posto: dois turnos seguidos de 4h30 em vez de um substituto de 1h", () => {
+    const turnos = dimensionar(loja, FINAL).turnosDaSemana[1];
+    expect(turnos.map((t) => [t.inicio, t.fim])).toEqual([
+      [9 * 60, 13 * 60 + 30],
+      [13 * 60 + 30, 18 * 60],
+    ]);
+  });
+
+  test("posto coberto, 3 postos: três turnos inteiros e uma pessoa que rende os intervalos", () => {
+    const d = dimensionar({ ...loja, postos: 3 }, FINAL);
+    const turnos = d.turnosDaSemana[1];
+    expect(turnos.map((t) => t.papel).sort()).toEqual(["cobre intervalos", "posto", "posto", "posto"]);
+    // Intervalos escalonados: 12h, 13h e 14h; o substituto fica das 12h às 15h.
+    expect(turnos.flatMap((t) => (t.intervalo ? [t.intervalo.inicio / 60] : []))).toEqual([12, 13, 14]);
+    expect(turnos.find((t) => t.papel === "cobre intervalos")).toMatchObject({
+      inicio: 12 * 60,
+      fim: 15 * 60,
+    });
+    expect(d.minimo).toBe(5);
+  });
+
+  test("posto coberto: 8h de funcionamento pedem duas pessoas por dia", () => {
     const d = dimensionar(escritorio, FINAL);
-    expect(d.turnosPorDia[1]).toBe(2);
+    expect(d.turnosDaSemana[1].length).toBe(2);
     expect(d.minimo).toBe(2);
   });
 
   test("posto vago no intervalo: uma pessoa cobre 8h de funcionamento trabalhando 7h", () => {
     const d = dimensionar({ ...escritorio, intervaloCoberto: false }, FINAL);
-    expect(d.turnosPorDia[1]).toBe(1);
+    expect(d.turnosDaSemana[1].length).toBe(1);
     expect(d.coberturaMin).toBe(5 * 7 * 60);
     expect(d.minimo).toBe(1);
   });
 
   test("posto vago: 9h de funcionamento cabem em um turno de 8h mais 1h de intervalo", () => {
-    // 6 turnos / 5 dias trabalháveis = 2
     const d = dimensionar({ ...loja, intervaloCoberto: false }, FINAL);
-    expect(d.turnosPorDia[1]).toBe(1);
+    expect(d.turnosDaSemana[1]).toMatchObject([
+      { trabalho: 480, intervalo: { inicio: 13 * 60, fim: 14 * 60 } },
+    ]);
     expect(d.minimo).toBe(2);
   });
 
@@ -94,7 +117,7 @@ describe("intervalo de refeição (CLT, art. 71)", () => {
       intervaloCoberto: false,
     };
     const d = dimensionar(dezHoras, FINAL);
-    expect(d.turnosPorDia[1]).toBe(2);
+    expect(d.turnosDaSemana[1].length).toBe(2);
     expect(d.coberturaMin).toBe(600 - 2 * 15);
   });
 
@@ -103,7 +126,7 @@ describe("intervalo de refeição (CLT, art. 71)", () => {
       dias: [null, { abre: "08:00", fecha: "14:00" }, null, null, null, null, null],
       postos: 1,
     };
-    expect(dimensionar(manha, FINAL).turnosPorDia[1]).toBe(1);
+    expect(dimensionar(manha, FINAL).turnosDaSemana[1].length).toBe(1);
   });
 });
 
@@ -121,26 +144,103 @@ describe("folga aos domingos", () => {
     expect(d.minimo).toBe(4);
     expect(d.limitante).toBe("folga aos domingos");
   });
-
-  test("24h com revezamento quinzenal: 3 turnos de domingo pedem 6 pessoas", () => {
-    expect(dimensionar({ ...sempreAberto, folgaDomingoACada: 2 }, FINAL).minimo).toBe(6);
-  });
 });
 
-describe("férias (CLT, art. 130)", () => {
-  test("sem cobertura de férias, nada é somado", () => {
-    expect(dimensionar(loja, FINAL).paraFerias).toBe(0);
+describe("reserva: férias, feriados e afastamentos", () => {
+  test("sem opções, não há reserva", () => {
+    expect(dimensionar(loja, FINAL).reserva).toEqual({ ferias: 0, feriados: 0, afastamentos: 0 });
   });
 
   test("3 em operação pedem 1 a mais para cobrir férias", () => {
     const d = dimensionar({ ...loja, cobrirFerias: true }, FINAL);
-    expect([d.emOperacao, d.paraFerias, d.minimo]).toEqual([3, 1, 4]);
+    expect([d.emOperacao, d.reserva.ferias, d.minimo]).toEqual([3, 1, 4]);
   });
 
-  test("12 em operação pedem 2 a mais: com 13, alguém ainda ficaria de férias ao mesmo tempo", () => {
-    // 24h, 3 postos: 72h por dia / 8h = 9 por dia; 63 turnos / 5 = 13; domingo 9 × 3/2 = 14
-    const d = dimensionar({ ...sempreAberto, postos: 3, cobrirFerias: true }, FINAL);
-    expect(d.emOperacao).toBe(14);
-    expect(d.paraFerias).toBe(2);
+  test("feriado com folga em outro dia pede 1 a mais quando não há reserva de férias", () => {
+    expect(dimensionar({ ...loja, feriados: "folga" }, FINAL).reserva.feriados).toBe(1);
+  });
+
+  test("a reserva de férias já absorve as folgas de feriado numa equipe pequena", () => {
+    const d = dimensionar({ ...loja, cobrirFerias: true, feriados: "folga" }, FINAL);
+    expect(d.reserva).toEqual({ ferias: 1, feriados: 0, afastamentos: 0 });
+  });
+
+  test("fechar ou pagar em dobro no feriado não muda a equipe", () => {
+    expect(dimensionar({ ...loja, feriados: "fecha" }, FINAL).minimo).toBe(3);
+    expect(dimensionar({ ...loja, feriados: "dobro" }, FINAL).minimo).toBe(3);
+  });
+
+  test("afastamentos só pesam quando somam pelo menos meia pessoa", () => {
+    // 3 pessoas × 5% = 0,15: nada. 15 pessoas × 5% = 0,75: uma a mais.
+    expect(dimensionar({ ...loja, afastamentos: 0.05 }, FINAL).reserva.afastamentos).toBe(0);
+    const grande = dimensionar({ ...loja, postos: 10, afastamentos: 0.05 }, FINAL);
+    expect([grande.emOperacao, grande.reserva.afastamentos]).toEqual([15, 1]);
+  });
+});
+
+describe("escala do ciclo", () => {
+  const todas = [
+    loja,
+    lojaTodoDia,
+    escritorio,
+    sempreAberto,
+    { ...loja, postos: 3 },
+    { ...lojaTodoDia, folgaDomingoACada: 2 as const },
+  ];
+
+  test("a escala gerada não tem violações em nenhuma fase", () => {
+    for (const f of todas) {
+      for (const data of [ANTES, TRANSICAO, FINAL]) {
+        expect(dimensionar(f, data).escala.violacoes).toEqual([]);
+      }
+    }
+  });
+
+  test("todo turno de todo dia do ciclo tem alguém escalado", () => {
+    const d = dimensionar(lojaTodoDia, FINAL);
+    const { grade, semanas } = d.escala;
+    for (let dia = 0; dia < semanas * 7; dia++) {
+      const escalados = grade.filter((dias) => dias[dia]).length;
+      expect(escalados).toBe(d.turnosDaSemana[dia % 7].length);
+    }
+  });
+
+  test("o ciclo tem as semanas do revezamento de domingo", () => {
+    expect(dimensionar(lojaTodoDia, FINAL).escala.semanas).toBe(3);
+    expect(dimensionar({ ...lojaTodoDia, folgaDomingoACada: 2 }, FINAL).escala.semanas).toBe(2);
+  });
+
+  test("cada funcionário tem 2 folgas por semana na regra final", () => {
+    const { grade, semanas } = dimensionar(lojaTodoDia, FINAL).escala;
+    for (const dias of grade) {
+      for (let s = 0; s < semanas; s++) {
+        expect(dias.slice(s * 7, s * 7 + 7).filter((t) => !t).length).toBeGreaterThanOrEqual(2);
+      }
+    }
+  });
+
+  test("o validador acusa quem trabalha os 7 dias", () => {
+    const d = dimensionar(lojaTodoDia, FINAL);
+    const turno = d.turnosDaSemana[1][0];
+    const grade = [Array(21).fill(turno)];
+    const regras = validar(grade, d.parametros, 3).map((v) => v.base);
+    expect(regras).toContain("OJ 410 da SDI-1 do TST");
+    expect(regras).toContain("Lei 10.101/2000, art. 6º; CLT, art. 386");
+    expect(regras).toContain(d.parametros.base);
+  });
+
+  test("o validador acusa menos de 11h entre jornadas", () => {
+    const p = dimensionar(loja, FINAL).parametros;
+    const noite = { inicio: 16 * 60, fim: 24 * 60, trabalho: 420, intervalo: null, papel: "posto" as const };
+    const manha = { inicio: 6 * 60, fim: 12 * 60, trabalho: 345, intervalo: null, papel: "posto" as const };
+    const grade = [[null, noite, manha, ...Array(18).fill(null)]];
+    expect(validar(grade, p, 3)).toEqual([
+      {
+        funcionario: 0,
+        dia: 2,
+        regra: "Menos de 11h de descanso desde o turno anterior",
+        base: "CLT, art. 66",
+      },
+    ]);
   });
 });

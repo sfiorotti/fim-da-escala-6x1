@@ -1,4 +1,6 @@
+import { type Escala, gerarEscala } from "./escala";
 import { type Opcoes, type ParametrosLegais, parametrosEm } from "./parametros";
+import { type Turno, turnosDoDia } from "./turnos";
 
 /** Horário de um dia da semana, "HH:MM". `null` = fechado. Fechar antes de abrir = vira a madrugada. */
 export type Dia = { abre: string; fecha: string } | null;
@@ -21,36 +23,44 @@ export type Funcionamento = {
   folgaDomingoACada?: 2 | 3;
   /** Soma à equipe quem cobre as férias dos colegas (CLT, art. 130). Padrão: `false`. */
   cobrirFerias?: boolean;
+  /**
+   * Feriados nacionais. "fecha": a empresa não abre. "folga": abre e dá folga em outro dia
+   * (soma à equipe quem cobre essas folgas). "dobro": abre e paga em dobro (Lei 605/1949, art. 9º).
+   * Padrão: "fecha".
+   */
+  feriados?: "fecha" | "folga" | "dobro";
+  /** Fração da equipe afastada em média (atestados, licenças, faltas), de 0 a 0,5. Padrão: 0. */
+  afastamentos?: number;
 };
 
-export type Limitante = "horas semanais" | "dias de repouso" | "jornada diária" | "folga aos domingos";
+export type Limitante =
+  | "horas semanais"
+  | "dias de repouso"
+  | "jornada diária"
+  | "folga aos domingos"
+  | "encaixe dos turnos";
 
 export type Dimensionamento = {
   parametros: ParametrosLegais;
   /** Minutos-pessoa de trabalho na semana. */
   coberturaMin: number;
-  /** Turnos (pessoa-dia) necessários em cada dia da semana. */
-  turnosPorDia: number[];
+  /** Turnos de cada dia da semana, de domingo a sábado. */
+  turnosDaSemana: Turno[][];
+  /** Escala do ciclo que comprova `emOperacao`. */
+  escala: Escala;
   /** Funcionários necessários com a equipe completa, sem horas extras. */
   emOperacao: number;
-  /** Funcionários a mais para cobrir férias (0 se `cobrirFerias` for falso). */
-  paraFerias: number;
-  /** Mínimo de funcionários CLT: `emOperacao + paraFerias`. */
+  /** Funcionários a mais para cobrir férias, folgas de feriado e afastamentos. */
+  reserva: { ferias: number; feriados: number; afastamentos: number };
+  /** Mínimo de funcionários CLT: `emOperacao` mais a reserva. */
   minimo: number;
-  /** Qual limite legal definiu `emOperacao`. */
+  /** Qual limite definiu `emOperacao`. */
   limitante: Limitante;
 };
 
-// CLT, art. 71: acima de 6h de trabalho, intervalo mínimo de 1h; de 4h a 6h, 15 min.
-// O intervalo não conta como jornada.
-const SEIS_HORAS = 6 * 60;
-const QUATRO_HORAS = 4 * 60;
-
-/** Intervalo devido a quem fica `permanencia` minutos no local, contando o próprio intervalo. */
-function intervalo(permanencia: number): number {
-  if (permanencia - 15 > SEIS_HORAS) return 60;
-  return permanencia > QUATRO_HORAS ? 15 : 0;
-}
+const DIAS_DE_FERIAS = 30;
+/** Leis 662/1949, 6.802/1980 e 14.759/2023: 1/1, 21/4, 1/5, 7/9, 12/10, 2/11, 15/11, 20/11 e 25/12. */
+export const FERIADOS_NACIONAIS = 9;
 
 function minutos(hora: string): number {
   const [h, m] = hora.split(":").map(Number);
@@ -63,68 +73,71 @@ export function minutosAbertos(dia: Dia): number {
   return duracao > 0 ? duracao : duracao + 24 * 60;
 }
 
-/** Turnos e minutos de trabalho de um dia com `aberto` minutos de funcionamento. */
-function dia(aberto: number, postos: number, tetoDiario: number, intervaloCoberto: boolean) {
-  if (aberto === 0) return { turnos: 0, trabalho: 0 };
-
-  if (intervaloCoberto) {
-    // Os postos ficam sempre ocupados. Se alguém trabalha mais de 6h, precisa de
-    // 1h de intervalo, e outra pessoa tem de estar lá para assumir o posto.
-    const trabalho = aberto * postos;
-    const substituto = aberto > SEIS_HORAS ? 1 : 0;
-    return { turnos: Math.max(Math.ceil(trabalho / tetoDiario), postos + substituto), trabalho };
-  }
-
-  // O posto fica vago no intervalo: cada posto é dividido no menor número de
-  // turnos iguais em que o trabalho de cada um cabe no teto diário.
-  let turnos = 1;
-  while (aberto / turnos - intervalo(aberto / turnos) > tetoDiario) turnos++;
-  const trabalho = aberto - turnos * intervalo(aberto / turnos);
-  return { turnos: turnos * postos, trabalho: trabalho * postos };
-}
-
-/** Tamanho da equipe para que `n` pessoas estejam disponíveis com férias de 30 dias por ano escalonadas. */
-function comFerias(n: number): number {
-  let equipe = n;
-  while (equipe - Math.ceil((equipe * 30) / 365) < n) equipe++;
-  return equipe;
+/**
+ * Tamanho da equipe para que `n` pessoas estejam disponíveis quando cada uma se ausenta
+ * `diasAusentes` por ano, de forma escalonada, e uma fração `taxa` está afastada em média.
+ * Os afastamentos são arredondados: só pesam quando somam pelo menos meia pessoa.
+ */
+function equipe(n: number, diasAusentes: number, taxa: number): number {
+  let tamanho = n;
+  while (tamanho - Math.ceil((tamanho * diasAusentes) / 365) - Math.round(tamanho * taxa) < n) tamanho++;
+  return tamanho;
 }
 
 /**
- * Mínimo de funcionários CLT para cobrir o horário de funcionamento sem horas extras.
- * É um piso: não monta a escala, e não considera faltas, feriados nem afastamentos.
+ * Funcionários CLT para cobrir o horário de funcionamento sem horas extras.
+ * `emOperacao` vem de uma escala montada de verdade; a reserva é uma estimativa anual.
  */
 export function dimensionar(f: Funcionamento, data: string, opcoes: Opcoes = {}): Dimensionamento {
   const p = parametrosEm(data, opcoes);
-  const porDia = f.dias.map((d) =>
-    dia(minutosAbertos(d), f.postos, p.tetoDiarioMin, f.intervaloCoberto ?? true),
+  const turnosDaSemana = f.dias.map((d) =>
+    turnosDoDia(
+      d ? minutos(d.abre) : 0,
+      minutosAbertos(d),
+      f.postos,
+      p.tetoDiarioMin,
+      f.intervaloCoberto ?? true,
+    ),
   );
 
-  const coberturaMin = porDia.reduce((soma, d) => soma + d.trabalho, 0);
-  const turnosPorDia = porDia.map((d) => d.turnos);
-  const turnosSemana = turnosPorDia.reduce((soma, t) => soma + t, 0);
+  const turnosPorDia = turnosDaSemana.map((t) => t.length);
+  const turnosNaSemana = turnosPorDia.reduce((soma, t) => soma + t, 0);
+  const coberturaMin = turnosDaSemana.flat().reduce((soma, t) => soma + t.trabalho, 0);
 
   // Cada pessoa trabalha no máximo (k - 1) de cada k domingos.
   const k = f.folgaDomingoACada ?? 3;
 
-  const candidatos: { limitante: Limitante; n: number }[] = [
+  const pisos: { limitante: Limitante; n: number }[] = [
     { limitante: "horas semanais", n: Math.ceil(coberturaMin / p.tetoSemanalMin) },
-    { limitante: "dias de repouso", n: Math.ceil(turnosSemana / (7 - p.repousosSemanais)) },
+    { limitante: "dias de repouso", n: Math.ceil(turnosNaSemana / (7 - p.repousosSemanais)) },
     { limitante: "jornada diária", n: Math.max(...turnosPorDia) },
     { limitante: "folga aos domingos", n: Math.ceil((turnosPorDia[0] * k) / (k - 1)) },
   ];
-  const maior = candidatos.reduce((a, b) => (b.n > a.n ? b : a));
+  const piso = pisos.reduce((a, b) => (b.n > a.n ? b : a));
 
-  const emOperacao = maior.n;
-  const paraFerias = f.cobrirFerias ? comFerias(emOperacao) - emOperacao : 0;
+  const escala = gerarEscala(turnosDaSemana, p, k, piso.n);
+  const emOperacao = escala.funcionarios;
+
+  const diasDeFerias = f.cobrirFerias ? DIAS_DE_FERIAS : 0;
+  const diasDeFeriado = f.feriados === "folga" ? FERIADOS_NACIONAIS : 0;
+  const taxa = Math.min(Math.max(f.afastamentos ?? 0, 0), 0.5);
+
+  const comFerias = equipe(emOperacao, diasDeFerias, 0);
+  const comFeriados = equipe(emOperacao, diasDeFerias + diasDeFeriado, 0);
+  const minimo = equipe(emOperacao, diasDeFerias + diasDeFeriado, taxa);
 
   return {
     parametros: p,
     coberturaMin,
-    turnosPorDia,
+    turnosDaSemana,
+    escala,
     emOperacao,
-    paraFerias,
-    minimo: emOperacao + paraFerias,
-    limitante: maior.limitante,
+    reserva: {
+      ferias: comFerias - emOperacao,
+      feriados: comFeriados - comFerias,
+      afastamentos: minimo - comFeriados,
+    },
+    minimo,
+    limitante: emOperacao > piso.n ? "encaixe dos turnos" : piso.limitante,
   };
 }
