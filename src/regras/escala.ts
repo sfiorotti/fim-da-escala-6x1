@@ -142,11 +142,83 @@ function distribuir(
 }
 
 /**
+ * Alonga `turno` até o turno cheio que o contém, com o intervalo fora do horário original,
+ * para que o posto continue ocupado nas horas em que já estava. `null` se não couber.
+ */
+function esticar(turno: Turno, cheios: Turno[]): Turno | null {
+  const cheio = cheios.find((c) => c.inicio <= turno.inicio && turno.fim <= c.fim);
+  if (!cheio || cheio.fim - cheio.inicio === turno.fim - turno.inicio) return null;
+
+  const pausa = cheio.intervalo ? cheio.intervalo.fim - cheio.intervalo.inicio : 0;
+  let intervalo: Turno["intervalo"] = null;
+  if (pausa) {
+    if (turno.fim + pausa <= cheio.fim) intervalo = { inicio: turno.fim, fim: turno.fim + pausa };
+    else if (turno.inicio - pausa >= cheio.inicio)
+      intervalo = { inicio: turno.inicio - pausa, fim: turno.inicio };
+    else return null;
+  }
+  return { ...cheio, intervalo, papel: turno.papel };
+}
+
+/**
+ * Leva cada funcionário o mais perto possível da jornada cheia, sem tirar ninguém de um posto:
+ * primeiro alonga os turnos curtos, depois dá turnos de reforço nos dias livres com menos gente.
+ * Funcionário CLT recebe o mês inteiro; uma escala com poucas horas não retrata o que a empresa paga.
+ */
+function preencher(
+  grade: Grade,
+  turnosDaSemana: Turno[][],
+  cheiosDaSemana: Turno[][],
+  p: ParametrosLegais,
+  semanas: number,
+): void {
+  const total = semanas * 7;
+  const cabe = (dias: (Turno | null)[]) => validar([dias], p, semanas).length === 0;
+
+  for (const dias of grade) {
+    for (let dia = 0; dia < total; dia++) {
+      const atual = dias[dia];
+      const maior = atual && esticar(atual, cheiosDaSemana[dia % 7]);
+      if (!maior) continue;
+      dias[dia] = maior;
+      if (!cabe(dias)) dias[dia] = atual;
+    }
+  }
+
+  const escalados = (dia: number) => grade.filter((dias) => dias[dia]).length;
+  let mudou = true;
+  // Um turno por pessoa a cada volta, para o reforço se espalhar pela equipe.
+  while (mudou) {
+    mudou = false;
+    for (const dias of grade) {
+      const livres = Array.from({ length: total }, (_, dia) => dia)
+        .filter((dia) => !dias[dia] && turnosDaSemana[dia % 7].length > 0)
+        .sort((a, b) => escalados(a) - escalados(b) || a - b);
+
+      for (const dia of livres) {
+        const cheios = cheiosDaSemana[dia % 7];
+        const opcoes = [cheios[escalados(dia) % cheios.length], turnosDaSemana[dia % 7][0]];
+        const serve = opcoes.find((turno) => {
+          dias[dia] = { ...turno, papel: "reforço" };
+          return cabe(dias);
+        });
+        if (serve) {
+          mudou = true;
+          break;
+        }
+        dias[dia] = null;
+      }
+    }
+  }
+}
+
+/**
  * Monta a escala do ciclo com o menor número de funcionários que a distribuição consegue,
  * a partir de `minimo`. A distribuição é gulosa: pode pedir uma pessoa a mais do que o ótimo.
  */
 export function gerarEscala(
   turnosDaSemana: Turno[][],
+  cheiosDaSemana: Turno[][],
   p: ParametrosLegais,
   semanas: number,
   minimo: number,
@@ -160,6 +232,7 @@ export function gerarEscala(
     const grade = distribuir(turnosDaSemana, n, p, semanas);
     if (!grade) continue;
     const violacoes = validar(grade, p, semanas);
+    if (violacoes.length === 0) preencher(grade, turnosDaSemana, cheiosDaSemana, p, semanas);
     if (violacoes.length === 0 || n >= limite) return { semanas, funcionarios: n, grade, violacoes };
   }
 }

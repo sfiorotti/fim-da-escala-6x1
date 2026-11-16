@@ -19,11 +19,11 @@ function Celula({ turno, violacoes }: { turno: Turno | null; violacoes: string[]
         {hora(turno.inicio)} às {hora(turno.fim)}
       </span>
       <span className="block text-xs whitespace-nowrap text-muted-foreground">
-        {turno.papel === "cobre intervalos"
-          ? "cobre os intervalos"
-          : turno.intervalo
-            ? `intervalo ${hora(turno.intervalo.inicio)} às ${hora(turno.intervalo.fim)}`
-            : "sem intervalo"}
+        {turno.papel === "reforço" && "reforço · "}
+        {turno.papel === "cobre intervalos" && "cobre intervalos · "}
+        {turno.intervalo
+          ? `intervalo ${hora(turno.intervalo.inicio)} às ${hora(turno.intervalo.fim)}`
+          : "sem intervalo"}
       </span>
       {violacoes.map((v) => (
         <span key={v} className="block text-xs text-destructive">
@@ -38,7 +38,6 @@ export function CalendarioEscala({ d }: { d: Dimensionamento }) {
   const { grade, semanas, violacoes } = d.escala;
   const [escolhida, setEscolhida] = useState(0);
   const semana = Math.min(escolhida, semanas - 1);
-  const reserva = d.minimo - d.emOperacao;
 
   return (
     <section className="mt-8 rounded-xl border bg-card p-5 sm:p-6">
@@ -46,9 +45,8 @@ export function CalendarioEscala({ d }: { d: Dimensionamento }) {
         <div>
           <h2 className="font-heading text-xl">Escala sugerida · {d.parametros.nome}</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            {d.emOperacao === 1 ? "1 funcionário" : `${d.emOperacao} funcionários`} em um ciclo de {semanas}{" "}
-            semanas, que se repete.
-            {reserva > 0 && ` A reserva de ${reserva} não aparece aqui.`}
+            {d.minimo === 1 ? "1 funcionário" : `${d.minimo} funcionários`} em um ciclo de {semanas} semanas,
+            que se repete.
           </p>
         </div>
         <div className="flex gap-1 rounded-lg bg-muted p-1 text-sm">
@@ -82,6 +80,7 @@ export function CalendarioEscala({ d }: { d: Dimensionamento }) {
                     {dia}
                   </th>
                 ))}
+                <th className="border-l px-3 py-2 font-medium">Na semana</th>
               </tr>
             </thead>
             <tbody>
@@ -101,6 +100,16 @@ export function CalendarioEscala({ d }: { d: Dimensionamento }) {
                       />
                     );
                   })}
+                  <td className="border-l px-3 py-2 font-medium whitespace-nowrap tabular-nums">
+                    {hora(
+                      dias
+                        .slice(semana * 7, semana * 7 + 7)
+                        .reduce((soma, t) => soma + (t?.trabalho ?? 0), 0),
+                    )}
+                    <span className="block text-xs font-normal text-muted-foreground">
+                      {dias.slice(semana * 7, semana * 7 + 7).filter(Boolean).length} dias
+                    </span>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -112,10 +121,12 @@ export function CalendarioEscala({ d }: { d: Dimensionamento }) {
                   const turnos = d.turnosDaSemana[i].length;
                   return (
                     <td key={nome} className="border-l px-3 py-2 tabular-nums">
-                      {turnos === 0 ? "Fechado" : `${escalados} de ${turnos}`}
+                      {turnos === 0 ? "Fechado" : escalados}
+                      {turnos > 0 && <span className="block text-xs">mínimo {turnos}</span>}
                     </td>
                   );
                 })}
+                <td className="border-l" />
               </tr>
             </tfoot>
           </table>

@@ -1,6 +1,6 @@
 import { type Escala, gerarEscala } from "./escala";
 import { type Opcoes, type ParametrosLegais, parametrosEm } from "./parametros";
-import { type Turno, turnosDoDia } from "./turnos";
+import { type Turno, turnosCheios, turnosDoDia } from "./turnos";
 
 /** Horário de um dia da semana, "HH:MM". `null` = fechado. Fechar antes de abrir = vira a madrugada. */
 export type Dia = { abre: string; fecha: string } | null;
@@ -46,7 +46,7 @@ export type Dimensionamento = {
   coberturaMin: number;
   /** Turnos de cada dia da semana, de domingo a sábado. */
   turnosDaSemana: Turno[][];
-  /** Escala do ciclo que comprova `emOperacao`. */
+  /** Escala do ciclo, com os turnos distribuídos entre os `minimo` funcionários. */
   escala: Escala;
   /** Funcionários necessários com a equipe completa, sem horas extras. */
   emOperacao: number;
@@ -115,8 +115,10 @@ export function dimensionar(f: Funcionamento, data: string, opcoes: Opcoes = {})
   ];
   const piso = pisos.reduce((a, b) => (b.n > a.n ? b : a));
 
-  const escala = gerarEscala(turnosDaSemana, p, k, piso.n);
-  const emOperacao = escala.funcionarios;
+  const cheiosDaSemana = f.dias.map((d) =>
+    turnosCheios(d ? minutos(d.abre) : 0, minutosAbertos(d), p.tetoDiarioMin),
+  );
+  const emOperacao = gerarEscala(turnosDaSemana, cheiosDaSemana, p, k, piso.n).funcionarios;
 
   const diasDeFerias = f.cobrirFerias ? DIAS_DE_FERIAS : 0;
   const diasDeFeriado = f.feriados === "folga" ? FERIADOS_NACIONAIS : 0;
@@ -130,7 +132,8 @@ export function dimensionar(f: Funcionamento, data: string, opcoes: Opcoes = {})
     parametros: p,
     coberturaMin,
     turnosDaSemana,
-    escala,
+    // A escala mostrada distribui os turnos pela equipe inteira, reserva incluída.
+    escala: gerarEscala(turnosDaSemana, cheiosDaSemana, p, k, minimo),
     emOperacao,
     reserva: {
       ferias: comFerias - emOperacao,

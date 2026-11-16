@@ -201,8 +201,50 @@ describe("escala do ciclo", () => {
     const { grade, semanas } = d.escala;
     for (let dia = 0; dia < semanas * 7; dia++) {
       const escalados = grade.filter((dias) => dias[dia]).length;
-      expect(escalados).toBe(d.turnosDaSemana[dia % 7].length);
+      expect(escalados).toBeGreaterThanOrEqual(d.turnosDaSemana[dia % 7].length);
     }
+  });
+
+  test("cada funcionário da loja cumpre 5 dias de 8h por semana na regra final", () => {
+    for (const f of [loja, { ...loja, cobrirFerias: true }]) {
+      const { grade, semanas } = dimensionar(f, FINAL).escala;
+      for (const dias of grade) {
+        for (let s = 0; s < semanas; s++) {
+          const semana = dias.slice(s * 7, s * 7 + 7).flatMap((t) => (t ? [t.trabalho] : []));
+          expect(semana).toEqual([480, 480, 480, 480, 480]);
+        }
+      }
+    }
+  });
+
+  test("turno alongado mantém o posto ocupado: o intervalo fica fora do horário original", () => {
+    // O mínimo do dia são dois turnos, 9h às 13h30 e 13h30 às 18h.
+    const { grade } = dimensionar(loja, FINAL).escala;
+    const segunda = grade.flatMap((dias) => (dias[1] ? [dias[1]] : []));
+    const trabalhando = (min: number) =>
+      segunda.filter(
+        (t) =>
+          t.inicio <= min &&
+          min < t.fim &&
+          !(t.intervalo && t.intervalo.inicio <= min && min < t.intervalo.fim),
+      ).length;
+    for (let min = 9 * 60; min < 18 * 60; min += 15) expect(trabalhando(min)).toBeGreaterThanOrEqual(1);
+  });
+
+  test("antes da emenda, 2 funcionários chegam perto das 44h sem passar", () => {
+    const { grade } = dimensionar(loja, ANTES).escala;
+    for (const dias of grade) {
+      const minutos = dias.slice(0, 7).reduce((soma, t) => soma + (t?.trabalho ?? 0), 0);
+      expect(minutos).toBeGreaterThan(38 * 60);
+      expect(minutos).toBeLessThanOrEqual(44 * 60);
+    }
+  });
+
+  test("a escala usa a equipe inteira, reserva incluída", () => {
+    const d = dimensionar({ ...loja, cobrirFerias: true }, FINAL);
+    expect(d.escala.funcionarios).toBe(4);
+    expect(d.escala.grade.every((dias) => dias.some(Boolean))).toBe(true);
+    expect(d.escala.violacoes).toEqual([]);
   });
 
   test("o ciclo tem as semanas do revezamento de domingo", () => {

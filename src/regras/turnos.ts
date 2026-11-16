@@ -8,7 +8,8 @@ export type Turno = {
   /** Minutos trabalhados, já sem o intervalo. */
   trabalho: number;
   intervalo: { inicio: number; fim: number } | null;
-  papel: "posto" | "cobre intervalos";
+  /** "reforço": turno além do mínimo, dado a quem ainda não completou a jornada da semana. */
+  papel: "posto" | "cobre intervalos" | "reforço";
 };
 
 const SEIS_HORAS = 6 * 60;
@@ -71,6 +72,19 @@ function emSequencia(
   return turnos;
 }
 
+/** Menor número de turnos seguidos em que o trabalho de cada um cabe no teto diário. */
+function partesCheias(aberto: number, tetoDiario: number): number {
+  let partes = 1;
+  while (aberto / partes - intervaloDevido(aberto / partes) > tetoDiario) partes++;
+  return partes;
+}
+
+/** Os turnos mais longos que o teto diário permite num dia, para um posto só. */
+export function turnosCheios(abre: number, aberto: number, tetoDiario: number): Turno[] {
+  if (aberto === 0) return [];
+  return emSequencia(abre, aberto, 1, partesCheias(aberto, tetoDiario), false);
+}
+
 /**
  * Turnos necessários num dia com `aberto` minutos de funcionamento a partir de `abre`.
  *
@@ -87,9 +101,7 @@ export function turnosDoDia(
 ): Turno[] {
   if (aberto === 0) return [];
 
-  let partes = 1;
-  while (aberto / partes - intervaloDevido(aberto / partes) > tetoDiario) partes++;
-  let turnos = emSequencia(abre, aberto, postos, partes, intervaloCoberto);
+  let turnos = emSequencia(abre, aberto, postos, partesCheias(aberto, tetoDiario), intervaloCoberto);
 
   if (turnos.some((t) => t.papel === "cobre intervalos")) {
     const curtos = emSequencia(abre, aberto, postos, Math.ceil(aberto / SEIS_HORAS), false);
