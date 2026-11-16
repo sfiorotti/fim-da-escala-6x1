@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { type Dia, dimensionar, type Funcionamento, minutosAbertos } from "./dimensionamento";
-import { validar } from "./escala";
+import { descobertos, validar } from "./escala";
 import { parametrosEm } from "./parametros";
 
 const NOVE_AS_SEIS: Dia = { abre: "09:00", fecha: "18:00" };
@@ -271,6 +271,36 @@ describe("escala do ciclo", () => {
     expect(regras).toContain(d.parametros.base);
   });
 
+  test("a escala gerada não deixa nenhum trecho do expediente descoberto", () => {
+    for (const f of todas) {
+      const d = dimensionar(f, FINAL);
+      const { grade, semanas } = d.escala;
+      for (let dia = 0; dia < semanas * 7; dia++) {
+        const expediente = d.expediente[dia % 7];
+        if (!expediente) continue;
+        const doDia = grade.flatMap((dias) => {
+          const turno = dias[dia];
+          return turno ? [turno] : [];
+        });
+        expect(descobertos(doDia, expediente, d.postos, d.intervaloCoberto)).toEqual([]);
+      }
+    }
+  });
+
+  test("descobertos aponta o intervalo de quem trabalha sozinho, só se o posto precisa ficar coberto", () => {
+    const turno = {
+      inicio: 540,
+      fim: 1080,
+      trabalho: 480,
+      intervalo: { inicio: 780, fim: 840 },
+      papel: "posto" as const,
+    };
+    const expediente = { inicio: 540, fim: 1080 };
+    expect(descobertos([turno], expediente, 1, true)).toEqual([{ inicio: 780, fim: 840 }]);
+    expect(descobertos([turno], expediente, 1, false)).toEqual([]);
+    expect(descobertos([], expediente, 1, true)).toEqual([expediente]);
+  });
+
   test("o validador acusa menos de 11h entre jornadas", () => {
     const p = dimensionar(loja, FINAL).parametros;
     const noite = { inicio: 16 * 60, fim: 24 * 60, trabalho: 420, intervalo: null, papel: "posto" as const };
@@ -280,6 +310,7 @@ describe("escala do ciclo", () => {
       {
         funcionario: 0,
         dia: 2,
+        escopo: "dia",
         regra: "Menos de 11h de descanso desde o turno anterior",
         base: "CLT, art. 66",
       },

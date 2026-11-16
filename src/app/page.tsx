@@ -301,7 +301,8 @@ export default function Home() {
         </aside>
       </div>
 
-      <CalendarioEscala d={fases[fase]} />
+      {/* A chave recria o calendário, e descarta as edições, quando qualquer entrada muda. */}
+      <CalendarioEscala key={JSON.stringify([funcionamento, cautelarStf, fase])} d={fases[fase]} />
     </main>
   );
 }

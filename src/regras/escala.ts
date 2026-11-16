@@ -8,6 +8,8 @@ export type Violacao = {
   funcionario: number;
   /** Dia do ciclo em que o problema aparece; domingo da semana 1 = 0. */
   dia: number;
+  /** Se o problema é do dia, da semana que começa em `dia`, ou do ciclo inteiro. */
+  escopo: "dia" | "semana" | "ciclo";
   regra: string;
   base: string;
 };
@@ -34,18 +36,28 @@ export function validar(grade: Grade, p: ParametrosLegais, semanas: number): Vio
   const violacoes: Violacao[] = [];
 
   grade.forEach((dias, funcionario) => {
-    const violar = (dia: number, regra: string, base: string) =>
-      violacoes.push({ funcionario, dia, regra, base });
+    const violar = (dia: number, escopo: Violacao["escopo"], regra: string, base: string) =>
+      violacoes.push({ funcionario, dia, escopo, regra, base });
 
     for (let semana = 0; semana < semanas; semana++) {
       const daSemana = dias.slice(semana * 7, semana * 7 + 7);
       const minutos = daSemana.reduce((soma, t) => soma + (t?.trabalho ?? 0), 0);
       const folgas = daSemana.filter((t) => !t).length;
       if (minutos > p.tetoSemanalMin) {
-        violar(semana * 7, `${horas(minutos)} na semana, acima de ${horas(p.tetoSemanalMin)}`, p.base);
+        violar(
+          semana * 7,
+          "semana",
+          `${horas(minutos)} na semana, acima de ${horas(p.tetoSemanalMin)}`,
+          p.base,
+        );
       }
       if (folgas < p.repousosSemanais) {
-        violar(semana * 7, `${folgas} folga(s) na semana, abaixo de ${p.repousosSemanais}`, p.base);
+        violar(
+          semana * 7,
+          "semana",
+          `${folgas} ${folgas === 1 ? "folga" : "folgas"} na semana, abaixo de ${p.repousosSemanais}`,
+          p.base,
+        );
       }
     }
 
@@ -58,24 +70,25 @@ export function validar(grade: Grade, p: ParametrosLegais, semanas: number): Vio
       if (!turno || i < total) continue;
 
       if (turno.trabalho > p.tetoDiarioMin) {
-        violar(dia, `${horas(turno.trabalho)} no dia, acima de ${horas(p.tetoDiarioMin)}`, p.base);
+        violar(dia, "dia", `${horas(turno.trabalho)} no dia, acima de ${horas(p.tetoDiarioMin)}`, p.base);
       }
       if (seguidos === MAX_DIAS_SEGUIDOS + 1) {
-        violar(dia, "7º dia seguido de trabalho", "OJ 410 da SDI-1 do TST");
+        violar(dia, "dia", "7º dia seguido de trabalho", "OJ 410 da SDI-1 do TST");
       }
       const anterior = dias[(dia + total - 1) % total];
       if (anterior && turno.inicio + DIA - anterior.fim < INTERJORNADA) {
-        violar(dia, "Menos de 11h de descanso desde o turno anterior", "CLT, art. 66");
+        violar(dia, "dia", "Menos de 11h de descanso desde o turno anterior", "CLT, art. 66");
       }
     }
 
     // Quem trabalha todos os dias nunca zera a contagem acima.
-    if (dias.every(Boolean)) violar(0, "Nenhuma folga no ciclo", "OJ 410 da SDI-1 do TST");
+    if (dias.every(Boolean)) violar(0, "ciclo", "Nenhuma folga no ciclo", "OJ 410 da SDI-1 do TST");
 
     const domingos = dias.filter((t, dia) => t && dia % 7 === 0).length;
     if (domingos > semanas - 1) {
       violar(
         0,
+        "ciclo",
         `Sem folga em nenhum domingo do ciclo de ${semanas} semanas`,
         "Lei 10.101/2000, art. 6º; CLT, art. 386",
       );
@@ -235,4 +248,40 @@ export function gerarEscala(
     if (violacoes.length === 0) preencher(grade, turnosDaSemana, cheiosDaSemana, p, semanas);
     if (violacoes.length === 0 || n >= limite) return { semanas, funcionarios: n, grade, violacoes };
   }
+}
+
+/**
+ * Trechos do expediente em que há menos gente trabalhando do que `postos`.
+ * Pausas de 15 minutos não contam como ausência; o intervalo de 1h só conta se `intervaloCoberto`.
+ */
+export function descobertos(
+  turnos: Turno[],
+  expediente: { inicio: number; fim: number },
+  postos: number,
+  intervaloCoberto: boolean,
+): { inicio: number; fim: number }[] {
+  const ausente = (t: Turno, min: number) =>
+    intervaloCoberto &&
+    t.intervalo !== null &&
+    t.intervalo.fim - t.intervalo.inicio >= 60 &&
+    t.intervalo.inicio <= min &&
+    min < t.intervalo.fim;
+  const trabalhando = (min: number) =>
+    turnos.filter((t) => t.inicio <= min && min < t.fim && !ausente(t, min)).length;
+
+  const cortes = [expediente.inicio, expediente.fim];
+  for (const t of turnos)
+    cortes.push(t.inicio, t.fim, ...(t.intervalo ? [t.intervalo.inicio, t.intervalo.fim] : []));
+  const pontos = [...new Set(cortes)]
+    .filter((min) => min >= expediente.inicio && min <= expediente.fim)
+    .sort((a, b) => a - b);
+
+  const faltas: { inicio: number; fim: number }[] = [];
+  for (let i = 0; i + 1 < pontos.length; i++) {
+    if (trabalhando(pontos[i]) >= postos) continue;
+    const ultima = faltas.at(-1);
+    if (ultima?.fim === pontos[i]) ultima.fim = pontos[i + 1];
+    else faltas.push({ inicio: pontos[i], fim: pontos[i + 1] });
+  }
+  return faltas;
 }

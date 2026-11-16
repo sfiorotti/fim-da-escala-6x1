@@ -44,6 +44,12 @@ export type Dimensionamento = {
   parametros: ParametrosLegais;
   /** Minutos-pessoa de trabalho na semana. */
   coberturaMin: number;
+  /** Abertura e fechamento de cada dia, em minutos desde a 0h; `null` = fechado. */
+  expediente: ({ inicio: number; fim: number } | null)[];
+  postos: number;
+  intervaloCoberto: boolean;
+  /** Os turnos mais longos possíveis em cada dia, para um posto. */
+  cheiosDaSemana: Turno[][];
   /** Turnos de cada dia da semana, de domingo a sábado. */
   turnosDaSemana: Turno[][];
   /** Escala do ciclo, com os turnos distribuídos entre os `minimo` funcionários. */
@@ -131,6 +137,12 @@ export function dimensionar(f: Funcionamento, data: string, opcoes: Opcoes = {})
   return {
     parametros: p,
     coberturaMin,
+    expediente: f.dias.map((d) =>
+      d ? { inicio: minutos(d.abre), fim: minutos(d.abre) + minutosAbertos(d) } : null,
+    ),
+    postos: f.postos,
+    intervaloCoberto: f.intervaloCoberto ?? true,
+    cheiosDaSemana,
     turnosDaSemana,
     // A escala mostrada distribui os turnos pela equipe inteira, reserva incluída.
     escala: gerarEscala(turnosDaSemana, cheiosDaSemana, p, k, minimo),
