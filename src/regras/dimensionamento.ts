@@ -1,4 +1,4 @@
-import { parametrosEm, type Opcoes, type ParametrosLegais } from "./parametros";
+import { type Opcoes, type ParametrosLegais, parametrosEm } from "./parametros";
 
 /** Horário de um dia da semana, "HH:MM". `null` = fechado. Fechar antes de abrir = vira a madrugada. */
 export type Dia = { abre: string; fecha: string } | null;
@@ -96,7 +96,9 @@ function comFerias(n: number): number {
  */
 export function dimensionar(f: Funcionamento, data: string, opcoes: Opcoes = {}): Dimensionamento {
   const p = parametrosEm(data, opcoes);
-  const porDia = f.dias.map((d) => dia(minutosAbertos(d), f.postos, p.tetoDiarioMin, f.intervaloCoberto ?? true));
+  const porDia = f.dias.map((d) =>
+    dia(minutosAbertos(d), f.postos, p.tetoDiarioMin, f.intervaloCoberto ?? true),
+  );
 
   const coberturaMin = porDia.reduce((soma, d) => soma + d.trabalho, 0);
   const turnosPorDia = porDia.map((d) => d.turnos);

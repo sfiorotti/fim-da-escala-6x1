@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { dimensionar, minutosAbertos, type Dia } from "@/regras/dimensionamento";
+import { type Dia, dimensionar, minutosAbertos } from "@/regras/dimensionamento";
 import { VIGENCIAS } from "@/regras/parametros";
 
 const NOMES = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
@@ -46,7 +46,13 @@ export default function Home() {
     if (dia) setUltimo(ultimo.map((d, j) => (j === i ? dia : d)));
   }
 
-  const funcionamento = { dias, postos: Math.max(1, postos), intervaloCoberto, folgaDomingoACada, cobrirFerias };
+  const funcionamento = {
+    dias,
+    postos: Math.max(1, postos),
+    intervaloCoberto,
+    folgaDomingoACada,
+    cobrirFerias,
+  };
   const fases = VIGENCIAS.map((v) => dimensionar(funcionamento, v.inicio, { cautelarStf }));
   const [antes, , final] = fases;
   const diferenca = final.minimo - antes.minimo;
@@ -59,8 +65,8 @@ export default function Home() {
           Quantos funcionários sua empresa precisa com a nova lei?
         </h1>
         <p className="mt-4 text-lg text-muted-foreground">
-          Informe o horário de funcionamento. O cálculo considera só funcionários CLT e os limites da
-          Emenda Constitucional 141/2026.
+          Informe o horário de funcionamento. O cálculo considera só funcionários CLT e os limites da Emenda
+          Constitucional 141/2026.
         </p>
       </header>
 
@@ -197,7 +203,8 @@ export default function Home() {
               {final.minimo === 1 ? "funcionário CLT, no mínimo" : "funcionários CLT, no mínimo"}
             </p>
             <p className="mt-4 border-t border-primary-foreground/20 pt-4 text-sm opacity-90">
-              {final.paraFerias > 0 && `${final.emOperacao} em operação e ${final.paraFerias} para cobrir férias. `}
+              {final.paraFerias > 0 &&
+                `${final.emOperacao} em operação e ${final.paraFerias} para cobrir férias. `}
               {diferenca > 0
                 ? `${diferenca} a mais do que na regra antiga (${antes.minimo}).`
                 : "O mesmo número da regra antiga."}{" "}

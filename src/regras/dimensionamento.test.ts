@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { dimensionar, minutosAbertos, type Dia, type Funcionamento } from "./dimensionamento";
+import { type Dia, dimensionar, type Funcionamento, minutosAbertos } from "./dimensionamento";
 import { parametrosEm } from "./parametros";
 
 const NOVE_AS_SEIS: Dia = { abre: "09:00", fecha: "18:00" };
@@ -99,7 +99,10 @@ describe("intervalo de refeição (CLT, art. 71)", () => {
   });
 
   test("até 6h de funcionamento não exigem substituto", () => {
-    const manha: Funcionamento = { dias: [null, { abre: "08:00", fecha: "14:00" }, null, null, null, null, null], postos: 1 };
+    const manha: Funcionamento = {
+      dias: [null, { abre: "08:00", fecha: "14:00" }, null, null, null, null, null],
+      postos: 1,
+    };
     expect(dimensionar(manha, FINAL).turnosPorDia[1]).toBe(1);
   });
 });

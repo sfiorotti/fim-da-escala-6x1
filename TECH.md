@@ -18,6 +18,7 @@ O gestor informa o horário de funcionamento da empresa e o sistema sugere quant
 | Banco e login | **Postgres via Supabase** | Banco relacional, autenticação e controle de acesso por linha num serviço só |
 | Motor de regras | **Módulo TypeScript puro** em `src/regras/` | Ver seção abaixo |
 | Testes | **`bun test`** | Já vem com o Bun, sem dependência extra; o motor de regras é o que mais precisa de teste |
+| Lint e formatação | **Biome** | Uma ferramenta só para lint, formatação e ordenação de imports, rápida e com pouca configuração |
 | Hospedagem | **Vercel** | Deploy direto do GitHub, sem servidor para administrar |
 | Gerenciador de pacotes e scripts | **Bun** | Instalação e execução rápidas, e uma ferramenta só para pacotes, scripts e testes |
 

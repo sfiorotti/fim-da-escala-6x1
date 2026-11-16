@@ -47,7 +47,7 @@ export type Opcoes = {
 };
 
 export function parametrosEm(data: string, opcoes: Opcoes = {}): ParametrosLegais {
-  const vigente = VIGENCIAS.findLast((v) => v.inicio <= data)!;
+  const vigente = VIGENCIAS.findLast((v) => v.inicio <= data) ?? VIGENCIAS[0];
   if (opcoes.cautelarStf && vigente.tetoSemanalMin === 42 * 60) {
     return { ...vigente, tetoDiarioMin: TETO_DIARIO_CAUTELAR_MIN };
   }
