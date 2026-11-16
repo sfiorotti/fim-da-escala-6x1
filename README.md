@@ -1,6 +1,6 @@
 # Escala 6x1 — base legal
 
-Referência jurídica do projeto: tudo o que o software precisa respeitar sobre jornada, escala e descanso no Brasil.
+Referência jurídica do projeto: tudo o que o software precisa respeitar sobre jornada, escala e descanso no Brasil. O catálogo de tipos de escala (5x2, 12x36 e outras) está em [ESCALAS.md](ESCALAS.md).
 
 **Atualizado em 15/11/2026.** O tema está em movimento (ver [Pontos em aberto](#9-pontos-em-aberto)). Revisar este arquivo antes de cada decisão de produto que dependa de regra legal.
 
@@ -238,13 +238,16 @@ Derivadas das seções acima. Cada uma deve ser parametrizada por **data de vig�
 
 ### O que o cálculo de dimensionamento já considera
 
-O cálculo em `src/regras/dimensionamento.ts` devolve um piso de funcionários, sem montar a escala. Ele aplica as regras 1, 2, 3, 6 e 12, e o intervalo de refeição da regra 7, com estas simplificações:
+O cálculo em `src/regras/` monta os turnos de cada dia (`turnos.ts`), distribui esses turnos numa escala de 2 ou 3 semanas que se repete (`escala.ts`) e soma uma reserva anual (`dimensionamento.ts`). A escala aplica as regras 1 a 7; a reserva aplica a regra 12. Simplificações:
 
-- **Intervalo de refeição.** Ou outra pessoa assume o posto (então qualquer dia com mais de 6h de funcionamento exige um substituto presente), ou o posto fica vago e o intervalo não é trabalhado. A pausa de 15 minutos das jornadas de 4h a 6h só é descontada no segundo caso.
+- **Intervalo de refeição.** Se o posto fica vago, cada posto recebe o menor número de turnos que cabe no teto diário, com 1h de intervalo não trabalhada. Se o posto fica sempre coberto, o cálculo escolhe a opção com menos gente entre turnos longos com um substituto que rende os intervalos de 1h (escalonados, até 6 por substituto) e turnos de até 6h. A pausa de 15 minutos das jornadas de 4h a 6h fica sem cobertura nos dois casos.
 - **Domingos.** Cada funcionário trabalha no máximo 2 de cada 3 domingos (comércio) ou 1 de cada 2 (art. 386), valendo a mesma regra para toda a equipe. Setores fora do comércio não têm regra própria no cálculo.
+- **Escala.** A distribuição é gulosa: dá cada turno a quem trabalhou menos na semana. Ela sempre respeita as regras, mas pode pedir uma pessoa a mais do que o mínimo teórico (acontece em operações 24h).
 - **Férias.** Considera 30 dias por ano por funcionário, escalonados, e soma à equipe quem os cobre. Não considera férias coletivas, fracionamento nem venda de 1/3.
+- **Feriados nacionais.** São 9 por ano (1/1, 21/4, 1/5, 7/9, 12/10, 2/11, 15/11, 20/11 e 25/12 — Leis 662/1949, 6.802/1980 e 14.759/2023, conferidas no Planalto). Só pesam na equipe quando a empresa abre e compensa com folga em outro dia: entram como 9 dias de ausência por pessoa ao ano. Sexta-feira da Paixão, Carnaval e Corpus Christi não são feriados nacionais; feriados estaduais e municipais (Lei 9.093/1995) ficam de fora.
+- **Afastamentos.** Percentual médio da equipe ausente, informado pelo gestor. É arredondado: só soma gente quando equivale a pelo menos meia pessoa.
 
-Ficam de fora: interjornada, limite de dias consecutivos, feriados, faltas e afastamentos.
+A reserva (férias, folgas de feriado, afastamentos) não aparece na escala. A escala não tem datas, então não marca feriados nem férias de ninguém.
 
 ---
 
