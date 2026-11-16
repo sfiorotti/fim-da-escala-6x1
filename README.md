@@ -1,6 +1,6 @@
 # Escala 6x1 — base legal
 
-Referência jurídica do projeto: tudo o que o software precisa respeitar sobre jornada, escala e descanso no Brasil. O catálogo de tipos de escala (5x2, 12x36 e outras) está em [ESCALAS.md](ESCALAS.md).
+Referência jurídica do projeto: tudo o que o software precisa respeitar sobre jornada, escala e descanso no Brasil. O catálogo de tipos de escala (5x2, 12x36 e outras) está em [ESCALAS.md](ESCALAS.md). O funcionamento do cálculo e do gerador de escala está em [MOTOR.md](MOTOR.md).
 
 **Atualizado em 15/11/2026.** O tema está em movimento (ver [Pontos em aberto](#9-pontos-em-aberto)). Revisar este arquivo antes de cada decisão de produto que dependa de regra legal.
 
@@ -238,11 +238,11 @@ Derivadas das seções acima. Cada uma deve ser parametrizada por **data de vig�
 
 ### O que o cálculo de dimensionamento já considera
 
-O cálculo em `src/regras/` monta os turnos de cada dia (`turnos.ts`), distribui esses turnos numa escala de 2 ou 3 semanas que se repete (`escala.ts`) e soma uma reserva anual (`dimensionamento.ts`). A escala aplica as regras 1 a 7; a reserva aplica a regra 12. Simplificações:
+O cálculo em `src/regras/` monta os turnos de cada dia (`turnos.ts`), monta uma escala que se repete (`escala.ts` e `rodizio.ts`) e soma uma reserva anual (`dimensionamento.ts`). A escala aplica as regras 1 a 7; a reserva aplica a regra 12. Simplificações:
 
 - **Intervalo de refeição.** Se o posto fica vago, cada posto recebe o menor número de turnos que cabe no teto diário, com 1h de intervalo não trabalhada. Se o posto fica sempre coberto, o cálculo escolhe a opção com menos gente entre turnos longos com um substituto que rende os intervalos de 1h (escalonados, até 6 por substituto) e turnos de até 6h. A pausa de 15 minutos das jornadas de 4h a 6h fica sem cobertura nos dois casos.
 - **Domingos.** Cada funcionário trabalha no máximo 2 de cada 3 domingos (comércio) ou 1 de cada 2 (art. 386), valendo a mesma regra para toda a equipe. Setores fora do comércio não têm regra própria no cálculo.
-- **Escala.** A distribuição é gulosa: dá cada turno a quem trabalhou menos na semana. Ela sempre respeita as regras, mas pode pedir uma pessoa a mais do que o mínimo teórico (acontece em operações 24h).
+- **Escala.** As folgas seguem um padrão por pessoa, com folgas juntas sempre que dá: fixo quando a empresa fecha aos domingos, em rodízio quando abre. Os detalhes e os limites estão em [MOTOR.md](MOTOR.md).
 - **Jornada cheia.** Depois de garantir o mínimo de cada dia, a escala alonga os turnos curtos e dá turnos de reforço nos dias livres, até cada pessoa chegar o mais perto possível do teto semanal. Parte do princípio de que todo funcionário é CLT em tempo integral e recebe o mês inteiro; por isso vários dias ficam com mais gente do que o mínimo. Contrato em tempo parcial não é considerado.
 - **Horário do almoço.** O almoço de 1h cai em hora cheia, deixando de 2h a 6h de trabalho antes e depois (num turno de 9h às 18h, das 11h às 15h). A escala começa pelo meio do turno e evita que duas pessoas almocem juntas. A CLT não fixa o horário do intervalo; a faixa de 2h é escolha nossa.
 - **Férias.** Considera 30 dias por ano por funcionário, escalonados, e soma à equipe quem os cobre. Não considera férias coletivas, fracionamento nem venda de 1/3.

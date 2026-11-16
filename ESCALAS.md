@@ -104,10 +104,19 @@ Por isso a 12x36 clássica, com 4 pessoas por posto, fecha a conta em 42h e deix
 
 ## 6. O que o produto faz hoje
 
-O gerador em `src/regras/escala.ts` não usa escalas com nome. Ele distribui os turnos respeitando os limites da seção 2, o que resulta em algo próximo de uma 5x2 com folgas em revezamento. Ainda não oferece:
+O motor (ver [MOTOR.md](MOTOR.md)) monta as escalas semanais do catálogo:
 
-- escolher uma escala pelo nome (4x2, 12x36);
-- turnos de 12h;
+| Tipo | Como entra |
+|---|---|
+| **5x2** | Padrão a partir de 16/12/2026 |
+| **6x1** | Padrão até 15/12/2026. Pode ser escolhida depois, e então a escala sai com a falta da segunda folga marcada em vermelho |
+| **4x3** | Só por escolha, com dias de 8h |
+
+Ainda não monta:
+
+- escalas por ciclo de dias (4x2, 6x2, 5x1, 3x1);
+- plantões com turnos de 12h ou 24h (12x36, 2x2, 4x4, 12x60, 12x72, 24x48, 24x72);
+- semana espanhola;
 - o regime compensatório por convenção coletiva, com semanas de uma folga só.
 
 ## 7. Fontes

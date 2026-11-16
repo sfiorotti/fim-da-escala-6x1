@@ -60,9 +60,10 @@ function Celula({
       </select>
       {turno && (
         <span className="block px-3 pb-2 text-xs whitespace-nowrap text-muted-foreground">
-          {turno.papel === "reforço" && "reforço · "}
           {turno.papel === "cobre intervalos" && "cobre intervalos · "}
-          {duracao(turno.trabalho)} de trabalho
+          {turno.intervalo &&
+            `${turno.intervalo.fim - turno.intervalo.inicio >= 60 ? "almoço" : "pausa"} ${hora(turno.intervalo.inicio)} às ${hora(turno.intervalo.fim)} · `}
+          {duracao(turno.trabalho)}
         </span>
       )}
       {violacoes.map((v) => (
@@ -82,7 +83,7 @@ export function CalendarioEscala({ d }: { d: Dimensionamento }) {
   const [semana, setSemana] = useState(0);
 
   const editada = edicao !== null;
-  const violacoes = validar(grade, d.parametros, semanas);
+  const violacoes = validar(grade, d.parametros, semanas, d.escala.domingoACada);
   const de = (funcionario: number, escopo: string, dia: number) =>
     violacoes
       .filter((v) => v.funcionario === funcionario && v.escopo === escopo && v.dia === dia)
@@ -122,8 +123,11 @@ export function CalendarioEscala({ d }: { d: Dimensionamento }) {
             {editada ? "Sua escala" : "Escala sugerida"} · {d.parametros.nome}
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            {d.minimo === 1 ? "1 funcionário" : `${d.minimo} funcionários`} em um ciclo de {semanas} semanas,
-            que se repete. Clique num dia para trocar o turno ou dar folga.
+            {d.minimo === 1 ? "1 funcionário" : `${d.minimo} funcionários`}
+            {semanas === 1
+              ? ", com a mesma escala toda semana. "
+              : ` em um ciclo de ${semanas} semanas, que se repete. `}
+            Clique num dia para trocar o turno ou dar folga.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3 text-sm">
@@ -136,7 +140,7 @@ export function CalendarioEscala({ d }: { d: Dimensionamento }) {
               Voltar à sugerida
             </button>
           )}
-          <div className="flex gap-1 rounded-lg bg-muted p-1">
+          <div className={`flex flex-wrap gap-1 rounded-lg bg-muted p-1 ${semanas === 1 ? "hidden" : ""}`}>
             {Array.from({ length: semanas }, (_, s) => (
               <button
                 // biome-ignore lint/suspicious/noArrayIndexKey: as semanas não mudam de ordem

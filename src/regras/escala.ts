@@ -1,4 +1,5 @@
 import type { ParametrosLegais } from "./parametros";
+import { montarRodizio } from "./rodizio";
 import { almocos, type Turno } from "./turnos";
 
 /** Turno (ou `null` = folga) de cada funcionário em cada dia do ciclo: `grade[funcionario][dia]`. */
@@ -15,8 +16,10 @@ export type Violacao = {
 };
 
 export type Escala = {
-  /** Semanas do ciclo, que se repete. Igual ao revezamento de domingo (2 ou 3). */
+  /** Semanas até a escala se repetir. */
   semanas: number;
+  /** De quantas em quantas semanas cada pessoa precisa folgar no domingo (2 ou 3). */
+  domingoACada: number;
   funcionarios: number;
   grade: Grade;
   violacoes: Violacao[];
@@ -31,7 +34,12 @@ function horas(min: number): string {
 }
 
 /** Confere a grade de um ciclo contra as regras legais. O ciclo se repete, então o último dia antecede o primeiro. */
-export function validar(grade: Grade, p: ParametrosLegais, semanas: number): Violacao[] {
+export function validar(
+  grade: Grade,
+  p: ParametrosLegais,
+  semanas: number,
+  domingoACada = semanas,
+): Violacao[] {
   const total = semanas * 7;
   const violacoes: Violacao[] = [];
 
@@ -84,12 +92,15 @@ export function validar(grade: Grade, p: ParametrosLegais, semanas: number): Vio
     // Quem trabalha todos os dias nunca zera a contagem acima.
     if (dias.every(Boolean)) violar(0, "ciclo", "Nenhuma folga no ciclo", "OJ 410 da SDI-1 do TST");
 
-    const domingos = dias.filter((t, dia) => t && dia % 7 === 0).length;
-    if (domingos > semanas - 1) {
+    const trabalhaNoDomingo = (semana: number) => Boolean(dias[(semana % semanas) * 7]);
+    const semFolga = Array.from({ length: semanas }, (_, inicio) =>
+      Array.from({ length: domingoACada }, (_, i) => trabalhaNoDomingo(inicio + i)).every(Boolean),
+    ).some(Boolean);
+    if (semFolga) {
       violar(
         0,
         "ciclo",
-        `Sem folga em nenhum domingo do ciclo de ${semanas} semanas`,
+        `${domingoACada} domingos seguidos sem folga`,
         "Lei 10.101/2000, art. 6º; CLT, art. 386",
       );
     }
@@ -225,6 +236,108 @@ function preencher(
   }
 }
 
+/** Como as folgas são distribuídas. */
+export type Regras = {
+  /** De quantas em quantas semanas cada pessoa precisa folgar no domingo (2 ou 3). */
+  domingoACada: number;
+  /** Folgas de cada pessoa por semana: 2 na 5x2, 1 na 6x1, 3 na 4x3. */
+  folgasPorSemana: number;
+  /** Troca os padrões de folga entre a equipe a cada semana, mesmo quando poderiam ser fixos. */
+  rodizio: boolean;
+  /**
+   * O gestor escolheu o tipo de escala. A escala sai nesse tipo mesmo que quebre a lei da fase,
+   * com as violações listadas; sem isso, um resultado com violações é descartado.
+   */
+  tipoEscolhido: boolean;
+};
+
+/**
+ * Escala no modelo das planilhas de revezamento: as folgas vêm de um padrão por pessoa (rodizio.ts),
+ * e quem trabalha no dia ocupa primeiro os turnos mínimos; os demais entram em turnos cheios.
+ * Devolve `null` se os padrões não fecham ou se o expediente fica descoberto.
+ */
+function porRodizio(
+  turnosDaSemana: Turno[][],
+  cheiosDaSemana: Turno[][],
+  cobertura: Cobertura,
+  p: ParametrosLegais,
+  regras: Regras,
+  n: number,
+): Escala | null {
+  const rodizio = montarRodizio(
+    n,
+    turnosDaSemana.map((turnos) => turnos.length),
+    regras.folgasPorSemana,
+    regras.domingoACada,
+    regras.rodizio,
+  );
+  if (!rodizio) return null;
+
+  const { semanas, folga } = rodizio;
+  const total = semanas * 7;
+  const grade: Grade = Array.from({ length: n }, () => Array(total).fill(null));
+
+  for (let dia = 0; dia < total; dia++) {
+    const minimos = turnosDaSemana[dia % 7];
+    const cheios = cheiosDaSemana[dia % 7];
+    if (minimos.length === 0) continue;
+
+    // Quem fez o horário mais cedo no último dia de trabalho pega a vaga mais cedo, e assim por diante.
+    const ultimoInicio = (f: number) => grade[f].findLast((t, d) => t && d < dia)?.inicio ?? 0;
+    const presentes = grade
+      .map((_, f) => f)
+      .filter((f) => !folga[f][dia])
+      .sort((a, b) => ultimoInicio(a) - ultimoInicio(b) || a - b);
+    if (presentes.length < minimos.length) return null;
+
+    const vagas = [...minimos];
+    for (let i = 0; vagas.length < presentes.length; i++) {
+      vagas.push({ ...cheios[i % cheios.length], papel: "reforço" });
+    }
+    vagas.sort((a, b) => a.inicio - b.inicio);
+    presentes.forEach((f, i) => {
+      grade[f][dia] = vagas[i];
+    });
+  }
+
+  for (const dias of grade) {
+    const noTeto = (dia: number) => {
+      const semana = dias.slice(dia - (dia % 7), dia - (dia % 7) + 7);
+      return semana.reduce((soma, t) => soma + (t?.trabalho ?? 0), 0) <= p.tetoSemanalMin;
+    };
+    // Se a semana passa do teto, os turnos além do mínimo encolhem ou viram folga.
+    for (let dia = total - 1; dia >= 0; dia--) {
+      if (dias[dia]?.papel !== "reforço" || noTeto(dia)) continue;
+      dias[dia] = { ...turnosDaSemana[dia % 7][0], papel: "reforço" };
+      if (!noTeto(dia)) dias[dia] = null;
+    }
+    // Depois, os turnos curtos crescem até o cheio enquanto a semana couber no teto.
+    for (let dia = 0; dia < total; dia++) {
+      const atual = dias[dia];
+      const maior = atual && esticar(atual, cheiosDaSemana[dia % 7]);
+      if (!maior) continue;
+      dias[dia] = maior;
+      if (!noTeto(dia)) dias[dia] = atual;
+    }
+  }
+  escalonarAlmocos(grade, cobertura, semanas);
+
+  const descoberto = grade[0].some((_, dia) => {
+    const expediente = cobertura.expediente[dia % 7];
+    const doDia = grade.flatMap((dias) => {
+      const turno = dias[dia];
+      return turno ? [turno] : [];
+    });
+    return (
+      expediente !== null &&
+      descobertos(doDia, expediente, cobertura.postos, cobertura.intervaloCoberto).length > 0
+    );
+  });
+  const violacoes = validar(grade, p, semanas, regras.domingoACada);
+  if (descoberto || (violacoes.length > 0 && !regras.tipoEscolhido)) return null;
+  return { semanas, domingoACada: regras.domingoACada, funcionarios: n, grade, violacoes };
+}
+
 /** O que o expediente exige em cada dia da semana, para conferir se a escala o cobre. */
 export type Cobertura = {
   /** Abertura e fechamento de cada dia, em minutos desde a 0h; `null` = fechado. */
@@ -275,23 +388,33 @@ function escalonarAlmocos(grade: Grade, c: Cobertura, semanas: number): void {
 }
 
 /**
- * Monta a escala do ciclo com o menor número de funcionários que a distribuição consegue,
- * a partir de `minimo`. A distribuição é gulosa: pode pedir uma pessoa a mais do que o ótimo.
+ * Monta a escala com o menor número de funcionários possível, a partir de `minimo`.
+ * Tenta primeiro o modelo de planilha (padrões de folga em rodízio). Se não fechar para aquela
+ * equipe, cai na distribuição gulosa, turno a turno, num ciclo de `semanas` semanas; ela sempre
+ * respeita as regras, mas espalha as folgas e pode pedir uma pessoa a mais do que o ótimo.
  */
 export function gerarEscala(
   turnosDaSemana: Turno[][],
   cheiosDaSemana: Turno[][],
   cobertura: Cobertura,
   p: ParametrosLegais,
-  semanas: number,
+  regras: Regras,
   minimo: number,
 ): Escala {
+  const semanas = regras.domingoACada;
   const turnosNaSemana = turnosDaSemana.reduce((soma, t) => soma + t.length, 0);
-  if (turnosNaSemana === 0) return { semanas, funcionarios: 0, grade: [], violacoes: [] };
+  if (turnosNaSemana === 0) {
+    return { semanas, domingoACada: semanas, funcionarios: 0, grade: [], violacoes: [] };
+  }
 
   // Com uma pessoa por turno e folga sobrando, a distribuição sempre fecha.
   const limite = Math.max(minimo, turnosNaSemana * 2);
   for (let n = Math.max(minimo, 1); ; n++) {
+    const rodizio = porRodizio(turnosDaSemana, cheiosDaSemana, cobertura, p, regras, n);
+    if (rodizio) return rodizio;
+    // Com o tipo escolhido, insiste no rodízio com mais gente antes de desistir dele.
+    if (regras.tipoEscolhido && n < limite) continue;
+
     const grade = distribuir(turnosDaSemana, n, p, semanas);
     if (!grade) continue;
     const violacoes = validar(grade, p, semanas);
@@ -299,7 +422,9 @@ export function gerarEscala(
       preencher(grade, turnosDaSemana, cheiosDaSemana, p, semanas);
       escalonarAlmocos(grade, cobertura, semanas);
     }
-    if (violacoes.length === 0 || n >= limite) return { semanas, funcionarios: n, grade, violacoes };
+    if (violacoes.length === 0 || n >= limite) {
+      return { semanas, domingoACada: semanas, funcionarios: n, grade, violacoes };
+    }
   }
 }
 

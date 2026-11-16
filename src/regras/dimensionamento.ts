@@ -21,6 +21,13 @@ export type Funcionamento = {
    * 3 = comércio em geral (Lei 10.101/2000, art. 6º); 2 = mulheres (CLT, art. 386). Padrão: 3.
    */
   folgaDomingoACada?: 2 | 3;
+  /**
+   * Tipo de escala. Sem escolha, vale o que a lei da fase exige (6x1 antes da emenda, 5x2 depois).
+   * Escolhido, a escala sai nesse tipo mesmo que descumpra a lei da fase, com as violações listadas.
+   */
+  tipo?: TipoDeEscala;
+  /** Troca as folgas entre a equipe a cada semana, mesmo quando poderiam ser fixas. Padrão: `false`. */
+  rodizio?: boolean;
   /** Soma à equipe quem cobre as férias dos colegas (CLT, art. 130). Padrão: `false`. */
   cobrirFerias?: boolean;
   /**
@@ -32,6 +39,10 @@ export type Funcionamento = {
   /** Fração da equipe afastada em média (atestados, licenças, faltas), de 0 a 0,5. Padrão: 0. */
   afastamentos?: number;
 };
+
+/** Escalas semanais que o motor monta, com as folgas por semana de cada uma. Ver ESCALAS.md. */
+export const TIPOS_DE_ESCALA = { "6x1": 1, "5x2": 2, "4x3": 3 } as const;
+export type TipoDeEscala = keyof typeof TIPOS_DE_ESCALA;
 
 export type Limitante =
   | "horas semanais"
@@ -109,9 +120,16 @@ export function dimensionar(f: Funcionamento, data: string, opcoes: Opcoes = {})
   // Cada pessoa trabalha no máximo (k - 1) de cada k domingos.
   const k = f.folgaDomingoACada ?? 3;
 
+  const regras = {
+    domingoACada: k,
+    folgasPorSemana: f.tipo ? TIPOS_DE_ESCALA[f.tipo] : p.repousosSemanais,
+    rodizio: f.rodizio ?? false,
+    tipoEscolhido: f.tipo !== undefined,
+  };
+
   const pisos: { limitante: Limitante; n: number }[] = [
     { limitante: "horas semanais", n: Math.ceil(coberturaMin / p.tetoSemanalMin) },
-    { limitante: "dias de repouso", n: Math.ceil(turnosNaSemana / (7 - p.repousosSemanais)) },
+    { limitante: "dias de repouso", n: Math.ceil(turnosNaSemana / (7 - regras.folgasPorSemana)) },
     { limitante: "jornada diária", n: Math.max(...turnosPorDia) },
     { limitante: "folga aos domingos", n: Math.ceil((turnosPorDia[0] * k) / (k - 1)) },
   ];
@@ -127,7 +145,7 @@ export function dimensionar(f: Funcionamento, data: string, opcoes: Opcoes = {})
     postos: f.postos,
     intervaloCoberto: f.intervaloCoberto ?? true,
   };
-  const emOperacao = gerarEscala(turnosDaSemana, cheiosDaSemana, cobertura, p, k, piso.n).funcionarios;
+  const emOperacao = gerarEscala(turnosDaSemana, cheiosDaSemana, cobertura, p, regras, piso.n).funcionarios;
 
   const diasDeFerias = f.cobrirFerias ? DIAS_DE_FERIAS : 0;
   const diasDeFeriado = f.feriados === "folga" ? FERIADOS_NACIONAIS : 0;
@@ -144,7 +162,7 @@ export function dimensionar(f: Funcionamento, data: string, opcoes: Opcoes = {})
     cheiosDaSemana,
     turnosDaSemana,
     // A escala mostrada distribui os turnos pela equipe inteira, reserva incluída.
-    escala: gerarEscala(turnosDaSemana, cheiosDaSemana, cobertura, p, k, minimo),
+    escala: gerarEscala(turnosDaSemana, cheiosDaSemana, cobertura, p, regras, minimo),
     emOperacao,
     reserva: {
       ferias: comFerias - emOperacao,

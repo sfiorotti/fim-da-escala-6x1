@@ -3,7 +3,13 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { type Dia, dimensionar, minutosAbertos } from "@/regras/dimensionamento";
+import {
+  type Dia,
+  dimensionar,
+  minutosAbertos,
+  TIPOS_DE_ESCALA,
+  type TipoDeEscala,
+} from "@/regras/dimensionamento";
 import { VIGENCIAS } from "@/regras/parametros";
 import { CalendarioEscala } from "./escala";
 
@@ -44,6 +50,8 @@ export default function Home() {
   const [feriados, setFeriados] = useState<"fecha" | "folga" | "dobro">("fecha");
   const [afastamentos, setAfastamentos] = useState(0);
   const [fase, setFase] = useState(VIGENCIAS.length - 1);
+  const [tipo, setTipo] = useState<TipoDeEscala | "">("");
+  const [rodizio, setRodizio] = useState(false);
 
   function mudarDia(i: number, dia: Dia) {
     setDias(dias.map((d, j) => (j === i ? dia : d)));
@@ -58,6 +66,8 @@ export default function Home() {
     cobrirFerias,
     feriados,
     afastamentos: afastamentos / 100,
+    tipo: tipo || undefined,
+    rodizio,
   };
   const fases = VIGENCIAS.map((v) => dimensionar(funcionamento, v.inicio, { cautelarStf }));
   const [antes, , final] = fases;
@@ -182,6 +192,43 @@ export default function Home() {
               </div>
             </fieldset>
           )}
+
+          <div className="mt-5 border-t pt-5">
+            <Label htmlFor="tipo">Tipo de escala</Label>
+            <select
+              id="tipo"
+              className="mt-2 block h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+              value={tipo}
+              onChange={(e) => setTipo(e.target.value as TipoDeEscala | "")}
+            >
+              <option value="">O que a lei de cada fase exige</option>
+              {Object.entries(TIPOS_DE_ESCALA).map(([nome, folgas]) => (
+                <option key={nome} value={nome}>
+                  {nome} ({folgas} {folgas === 1 ? "folga" : "folgas"} por semana)
+                </option>
+              ))}
+            </select>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Escolhido um tipo, a escala sai nele mesmo quando a lei da fase não permite, com os problemas
+              marcados em vermelho. Escalas por ciclo de dias ou por plantão (4x2, 6x2, 12x36) ainda não são
+              montadas.
+            </p>
+          </div>
+
+          <div className="mt-5 space-y-2 border-t pt-5 text-sm">
+            <Opcao
+              type="checkbox"
+              checked={rodizio || !!dias[0]}
+              disabled={!!dias[0]}
+              onChange={() => setRodizio(!rodizio)}
+              titulo="Variar as folgas entre as semanas"
+              detalhe={
+                dias[0]
+                  ? "Obrigatório para quem abre aos domingos: a folga de domingo precisa rodar."
+                  : "As folgas trocam de dono a cada semana. Desmarcado, cada pessoa folga sempre nos mesmos dias."
+              }
+            />
+          </div>
 
           <fieldset className="mt-5 border-t pt-5">
             <legend className="float-left mb-3 w-full font-medium">Nos feriados nacionais</legend>

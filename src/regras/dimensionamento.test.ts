@@ -56,11 +56,11 @@ describe("dimensionamento", () => {
     expect(d.limitante).toBe("dias de repouso");
   });
 
-  test("aberto 24h todos os dias: turnos de 6h, e a escala pede mais gente que o piso", () => {
+  test("aberto 24h todos os dias: turnos de 6h, com 6 pessoas", () => {
+    // 28 turnos / 5 dias trabalháveis = 5,6 → 6; domingo: 4 turnos × 3/2 = 6
     const d = dimensionar(sempreAberto, FINAL);
     expect(d.turnosDaSemana[0].length).toBe(4);
-    expect(d.emOperacao).toBe(7);
-    expect(d.limitante).toBe("encaixe dos turnos");
+    expect(d.emOperacao).toBe(6);
   });
 
   test("tudo fechado: nenhum funcionário", () => {
@@ -179,6 +179,35 @@ describe("reserva: férias, feriados e afastamentos", () => {
   });
 });
 
+describe("tipo de escala", () => {
+  test("6x1 antes da emenda: 2 pessoas, uma folga cada, sem violações", () => {
+    const d = dimensionar({ ...loja, tipo: "6x1" }, ANTES);
+    expect(d.emOperacao).toBe(2);
+    expect(d.escala.violacoes).toEqual([]);
+  });
+
+  test("6x1 na regra final: a escala sai, mas acusa a falta da segunda folga", () => {
+    const d = dimensionar({ ...loja, tipo: "6x1" }, FINAL);
+    expect(d.emOperacao).toBe(2);
+    expect(d.escala.violacoes.map((v) => v.regra)).toContain("1 folga na semana, abaixo de 2");
+    // Mesmo fora da regra de folgas, ninguém passa do teto de 40h.
+    expect(d.escala.violacoes.some((v) => v.regra.includes("acima de 40h"))).toBe(false);
+  });
+
+  test("4x3: três folgas por semana, sem violações", () => {
+    // 12 turnos / 4 dias trabalháveis = 3
+    const d = dimensionar({ ...loja, tipo: "4x3" }, FINAL);
+    expect(d.emOperacao).toBe(3);
+    expect(d.escala.violacoes).toEqual([]);
+    for (const dias of d.escala.grade) expect(dias.filter((t) => !t).length).toBe(3);
+  });
+
+  test("sem tipo escolhido, vale a lei da fase: uma folga antes, duas depois", () => {
+    const folgas = (data: string) => dimensionar(loja, data).escala.grade[0].filter((t) => !t).length;
+    expect([folgas(ANTES), folgas(FINAL)]).toEqual([1, 2]);
+  });
+});
+
 describe("escala do ciclo", () => {
   const todas = [
     loja,
@@ -246,10 +275,10 @@ describe("escala do ciclo", () => {
     expect(almocos(turno).map((t) => (t.intervalo?.inicio ?? 0) / 60)).toEqual([11, 12, 13, 14, 15]);
   });
 
-  test("os almoços caem em hora cheia e se espalham: três pessoas, 13h, 12h e 14h", () => {
+  test("os almoços caem em hora cheia e se espalham: quatro pessoas, 13h, 12h, 14h e 11h", () => {
     const { grade } = dimensionar({ ...loja, cobrirFerias: true }, FINAL).escala;
     const quarta = grade.flatMap((dias) => (dias[3]?.intervalo ? [dias[3].intervalo.inicio / 60] : []));
-    expect(quarta).toEqual([13, 12, 14]);
+    expect(quarta).toEqual([13, 12, 14, 11]);
   });
 
   test("a escala usa a equipe inteira, reserva incluída", () => {
@@ -259,9 +288,45 @@ describe("escala do ciclo", () => {
     expect(d.escala.violacoes).toEqual([]);
   });
 
-  test("o ciclo tem as semanas do revezamento de domingo", () => {
-    expect(dimensionar(lojaTodoDia, FINAL).escala.semanas).toBe(3);
-    expect(dimensionar({ ...lojaTodoDia, folgaDomingoACada: 2 }, FINAL).escala.semanas).toBe(2);
+  test("fechada no domingo: folgas fixas, a mesma semana sempre", () => {
+    const { semanas, grade } = dimensionar(loja, FINAL).escala;
+    expect(semanas).toBe(1);
+    // Sábado e domingo; domingo e segunda; e quem sobra folga domingo e mais um dia.
+    expect(grade.map((dias) => dias.flatMap((t, dia) => (t ? [] : [dia])))).toEqual([
+      [0, 6],
+      [0, 2],
+      [0, 1],
+    ]);
+  });
+
+  test("fechada no domingo, com rodízio: os padrões de folga trocam de dono a cada semana", () => {
+    const { semanas, grade } = dimensionar({ ...loja, rodizio: true }, FINAL).escala;
+    expect(semanas).toBe(3);
+    const folgas = (f: number, semana: number) =>
+      [0, 1, 2, 3, 4, 5, 6].filter((dia) => !grade[f][semana * 7 + dia]).join();
+    expect(folgas(0, 1)).toBe(folgas(1, 0));
+    expect(folgas(0, 2)).toBe(folgas(2, 0));
+    expect(new Set([folgas(0, 0), folgas(0, 1), folgas(0, 2)]).size).toBe(3);
+  });
+
+  test("aberta no domingo: o ciclo tem uma semana por pessoa e todos passam pelos mesmos padrões", () => {
+    const { semanas, grade } = dimensionar({ ...lojaTodoDia, postos: 2 }, FINAL).escala;
+    expect(semanas).toBe(5);
+    const padroes = (f: number) =>
+      Array.from({ length: semanas }, (_, s) =>
+        [0, 1, 2, 3, 4, 5, 6].filter((dia) => !grade[f][s * 7 + dia]).join(),
+      ).sort();
+    for (let f = 1; f < grade.length; f++) expect(padroes(f)).toEqual(padroes(0));
+  });
+
+  test("aberta no domingo com 2 postos: quase todas as folgas são em dias seguidos", () => {
+    const { grade } = dimensionar({ ...lojaTodoDia, postos: 2 }, FINAL).escala;
+    const dias = grade[0];
+    const isoladas = dias.filter(
+      (t, dia) => !t && dias[(dia + dias.length - 1) % dias.length] && dias[(dia + 1) % dias.length],
+    ).length;
+    expect(dias.filter((t) => !t).length).toBe(10);
+    expect(isoladas).toBeLessThanOrEqual(2);
   });
 
   test("cada funcionário tem 2 folgas por semana na regra final", () => {
