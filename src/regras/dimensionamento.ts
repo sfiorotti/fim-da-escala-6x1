@@ -1,4 +1,4 @@
-import { type Escala, gerarEscala } from "./escala";
+import { type Cobertura, type Escala, gerarEscala } from "./escala";
 import { type Opcoes, type ParametrosLegais, parametrosEm } from "./parametros";
 import { type Turno, turnosCheios, turnosDoDia } from "./turnos";
 
@@ -40,14 +40,10 @@ export type Limitante =
   | "folga aos domingos"
   | "encaixe dos turnos";
 
-export type Dimensionamento = {
+export type Dimensionamento = Cobertura & {
   parametros: ParametrosLegais;
   /** Minutos-pessoa de trabalho na semana. */
   coberturaMin: number;
-  /** Abertura e fechamento de cada dia, em minutos desde a 0h; `null` = fechado. */
-  expediente: ({ inicio: number; fim: number } | null)[];
-  postos: number;
-  intervaloCoberto: boolean;
   /** Os turnos mais longos possíveis em cada dia, para um posto. */
   cheiosDaSemana: Turno[][];
   /** Turnos de cada dia da semana, de domingo a sábado. */
@@ -124,7 +120,14 @@ export function dimensionar(f: Funcionamento, data: string, opcoes: Opcoes = {})
   const cheiosDaSemana = f.dias.map((d) =>
     turnosCheios(d ? minutos(d.abre) : 0, minutosAbertos(d), p.tetoDiarioMin),
   );
-  const emOperacao = gerarEscala(turnosDaSemana, cheiosDaSemana, p, k, piso.n).funcionarios;
+  const cobertura: Cobertura = {
+    expediente: f.dias.map((d) =>
+      d ? { inicio: minutos(d.abre), fim: minutos(d.abre) + minutosAbertos(d) } : null,
+    ),
+    postos: f.postos,
+    intervaloCoberto: f.intervaloCoberto ?? true,
+  };
+  const emOperacao = gerarEscala(turnosDaSemana, cheiosDaSemana, cobertura, p, k, piso.n).funcionarios;
 
   const diasDeFerias = f.cobrirFerias ? DIAS_DE_FERIAS : 0;
   const diasDeFeriado = f.feriados === "folga" ? FERIADOS_NACIONAIS : 0;
@@ -137,15 +140,11 @@ export function dimensionar(f: Funcionamento, data: string, opcoes: Opcoes = {})
   return {
     parametros: p,
     coberturaMin,
-    expediente: f.dias.map((d) =>
-      d ? { inicio: minutos(d.abre), fim: minutos(d.abre) + minutosAbertos(d) } : null,
-    ),
-    postos: f.postos,
-    intervaloCoberto: f.intervaloCoberto ?? true,
+    ...cobertura,
     cheiosDaSemana,
     turnosDaSemana,
     // A escala mostrada distribui os turnos pela equipe inteira, reserva incluída.
-    escala: gerarEscala(turnosDaSemana, cheiosDaSemana, p, k, minimo),
+    escala: gerarEscala(turnosDaSemana, cheiosDaSemana, cobertura, p, k, minimo),
     emOperacao,
     reserva: {
       ferias: comFerias - emOperacao,

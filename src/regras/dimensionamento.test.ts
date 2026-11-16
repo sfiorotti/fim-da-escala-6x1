@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { type Dia, dimensionar, type Funcionamento, minutosAbertos } from "./dimensionamento";
 import { descobertos, validar } from "./escala";
 import { parametrosEm } from "./parametros";
+import { almocos } from "./turnos";
 
 const NOVE_AS_SEIS: Dia = { abre: "09:00", fecha: "18:00" };
 
@@ -238,6 +239,17 @@ describe("escala do ciclo", () => {
       expect(minutos).toBeGreaterThan(38 * 60);
       expect(minutos).toBeLessThanOrEqual(44 * 60);
     }
+  });
+
+  test("um turno de 9h às 18h aceita almoço das 11h às 15h, de hora em hora", () => {
+    const [turno] = dimensionar({ ...loja, intervaloCoberto: false }, FINAL).turnosDaSemana[1];
+    expect(almocos(turno).map((t) => (t.intervalo?.inicio ?? 0) / 60)).toEqual([11, 12, 13, 14, 15]);
+  });
+
+  test("os almoços caem em hora cheia e se espalham: três pessoas, 13h, 12h e 14h", () => {
+    const { grade } = dimensionar({ ...loja, cobrirFerias: true }, FINAL).escala;
+    const quarta = grade.flatMap((dias) => (dias[3]?.intervalo ? [dias[3].intervalo.inicio / 60] : []));
+    expect(quarta).toEqual([13, 12, 14]);
   });
 
   test("a escala usa a equipe inteira, reserva incluída", () => {

@@ -109,3 +109,19 @@ export function turnosDoDia(
   }
   return turnos.sort((a, b) => a.inicio - b.inicio || b.fim - a.fim);
 }
+
+/**
+ * Variações de `turno` com o almoço de 1h em cada hora cheia possível,
+ * deixando de 2h a 6h de trabalho antes e depois. Turnos sem almoço de 1h não variam.
+ */
+export function almocos(turno: Turno): Turno[] {
+  if (!turno.intervalo || turno.intervalo.fim - turno.intervalo.inicio !== 60) return [turno];
+
+  const variacoes: Turno[] = [];
+  const primeiro = Math.ceil((turno.inicio + 120) / 60) * 60;
+  for (let inicio = primeiro; inicio + 60 <= turno.fim - 120; inicio += 60) {
+    if (inicio - turno.inicio > SEIS_HORAS || turno.fim - inicio - 60 > SEIS_HORAS) continue;
+    variacoes.push({ ...turno, intervalo: { inicio, fim: inicio + 60 } });
+  }
+  return variacoes.length ? variacoes : [turno];
+}

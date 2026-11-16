@@ -1,5 +1,5 @@
 import type { ParametrosLegais } from "./parametros";
-import type { Turno } from "./turnos";
+import { almocos, type Turno } from "./turnos";
 
 /** Turno (ou `null` = folga) de cada funcionário em cada dia do ciclo: `grade[funcionario][dia]`. */
 export type Grade = (Turno | null)[][];
@@ -225,6 +225,55 @@ function preencher(
   }
 }
 
+/** O que o expediente exige em cada dia da semana, para conferir se a escala o cobre. */
+export type Cobertura = {
+  /** Abertura e fechamento de cada dia, em minutos desde a 0h; `null` = fechado. */
+  expediente: ({ inicio: number; fim: number } | null)[];
+  postos: number;
+  intervaloCoberto: boolean;
+};
+
+/**
+ * Espalha os almoços de quem trabalha no mesmo dia por horas cheias, começando pelo meio do turno
+ * e evitando que duas pessoas almocem juntas. Se o expediente ficar descoberto, o dia volta ao que era.
+ */
+function escalonarAlmocos(grade: Grade, c: Cobertura, semanas: number): void {
+  for (let dia = 0; dia < semanas * 7; dia++) {
+    const expediente = c.expediente[dia % 7];
+    if (!expediente) continue;
+
+    const originais = grade.map((dias) => dias[dia]);
+    const ocupados: { inicio: number; fim: number }[] = [];
+
+    for (const dias of grade) {
+      const turno = dias[dia];
+      if (!turno) continue;
+      const meio = (turno.inicio + turno.fim) / 2;
+      const peso = ({ intervalo }: Turno) =>
+        intervalo
+          ? [
+              ocupados.filter((o) => o.inicio < intervalo.fim && intervalo.inicio < o.fim).length,
+              Math.abs((intervalo.inicio + intervalo.fim) / 2 - meio),
+              intervalo.inicio,
+            ]
+          : [0, 0, 0];
+      const escolhido = almocos(turno).reduce((a, b) => (antes(peso(b), peso(a)) ? b : a));
+      dias[dia] = escolhido;
+      if (escolhido.intervalo) ocupados.push(escolhido.intervalo);
+    }
+
+    const doDia = grade.flatMap((dias) => {
+      const turno = dias[dia];
+      return turno ? [turno] : [];
+    });
+    if (descobertos(doDia, expediente, c.postos, c.intervaloCoberto).length > 0) {
+      grade.forEach((dias, f) => {
+        dias[dia] = originais[f];
+      });
+    }
+  }
+}
+
 /**
  * Monta a escala do ciclo com o menor número de funcionários que a distribuição consegue,
  * a partir de `minimo`. A distribuição é gulosa: pode pedir uma pessoa a mais do que o ótimo.
@@ -232,6 +281,7 @@ function preencher(
 export function gerarEscala(
   turnosDaSemana: Turno[][],
   cheiosDaSemana: Turno[][],
+  cobertura: Cobertura,
   p: ParametrosLegais,
   semanas: number,
   minimo: number,
@@ -245,7 +295,10 @@ export function gerarEscala(
     const grade = distribuir(turnosDaSemana, n, p, semanas);
     if (!grade) continue;
     const violacoes = validar(grade, p, semanas);
-    if (violacoes.length === 0) preencher(grade, turnosDaSemana, cheiosDaSemana, p, semanas);
+    if (violacoes.length === 0) {
+      preencher(grade, turnosDaSemana, cheiosDaSemana, p, semanas);
+      escalonarAlmocos(grade, cobertura, semanas);
+    }
     if (violacoes.length === 0 || n >= limite) return { semanas, funcionarios: n, grade, violacoes };
   }
 }

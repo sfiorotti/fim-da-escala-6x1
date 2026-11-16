@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { Dimensionamento } from "@/regras/dimensionamento";
 import { descobertos, type Grade, validar } from "@/regras/escala";
-import type { Turno } from "@/regras/turnos";
+import { almocos, type Turno } from "@/regras/turnos";
 
 const DIAS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
@@ -21,7 +21,8 @@ function chave(t: Turno) {
 }
 
 function rotulo(t: Turno) {
-  const intervalo = t.intervalo ? `, intervalo ${hora(t.intervalo.inicio)} às ${hora(t.intervalo.fim)}` : "";
+  const nome = t.intervalo && t.intervalo.fim - t.intervalo.inicio >= 60 ? "almoço" : "pausa";
+  const intervalo = t.intervalo ? `, ${nome} ${hora(t.intervalo.inicio)} às ${hora(t.intervalo.fim)}` : "";
   return `${hora(t.inicio)} às ${hora(t.fim)}${intervalo}`;
 }
 
@@ -90,7 +91,7 @@ export function CalendarioEscala({ d }: { d: Dimensionamento }) {
   // Opções de turno de cada dia da semana: os mais longos primeiro, depois os do mínimo do dia.
   const opcoes = DIAS.map((_, i) => {
     const unicas = new Map<string, Turno>();
-    for (const t of [...d.cheiosDaSemana[i], ...d.turnosDaSemana[i]]) {
+    for (const t of [...d.cheiosDaSemana[i], ...d.turnosDaSemana[i]].flatMap(almocos)) {
       if (!unicas.has(chave(t))) unicas.set(chave(t), { ...t, papel: "posto" });
     }
     return [...unicas.values()];
