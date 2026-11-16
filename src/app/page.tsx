@@ -15,19 +15,38 @@ function horas(min: number) {
   return m ? `${h}h${String(m).padStart(2, "0")}` : `${h}h`;
 }
 
+function Opcao({
+  titulo,
+  detalhe,
+  ...input
+}: { titulo: string; detalhe: string } & React.ComponentProps<"input">) {
+  return (
+    <label className="flex items-start gap-2">
+      <input className="mt-0.5 size-4 accent-primary" {...input} />
+      <span>
+        {titulo}
+        <span className="block text-muted-foreground">{detalhe}</span>
+      </span>
+    </label>
+  );
+}
+
 export default function Home() {
   const [dias, setDias] = useState<Dia[]>([null, PADRAO, PADRAO, PADRAO, PADRAO, PADRAO, PADRAO]);
   // Guarda o último horário de cada dia para devolvê-lo quando o dia for reaberto.
   const [ultimo, setUltimo] = useState<Dia[]>(Array(7).fill(PADRAO));
   const [postos, setPostos] = useState(1);
   const [cautelarStf, setCautelarStf] = useState(true);
+  const [intervaloCoberto, setIntervaloCoberto] = useState(true);
+  const [folgaDomingoACada, setFolgaDomingoACada] = useState<2 | 3>(3);
+  const [cobrirFerias, setCobrirFerias] = useState(true);
 
   function mudarDia(i: number, dia: Dia) {
     setDias(dias.map((d, j) => (j === i ? dia : d)));
     if (dia) setUltimo(ultimo.map((d, j) => (j === i ? dia : d)));
   }
 
-  const funcionamento = { dias, postos: Math.max(1, postos) };
+  const funcionamento = { dias, postos: Math.max(1, postos), intervaloCoberto, folgaDomingoACada, cobrirFerias };
   const fases = VIGENCIAS.map((v) => dimensionar(funcionamento, v.inicio, { cautelarStf }));
   const [antes, , final] = fases;
   const diferenca = final.minimo - antes.minimo;
@@ -94,32 +113,79 @@ export default function Home() {
             })}
           </ul>
 
-          <div className="mt-5 flex flex-wrap items-end gap-6 border-t pt-5">
-            <div>
-              <Label htmlFor="postos">Pessoas trabalhando ao mesmo tempo</Label>
-              <Input
-                id="postos"
-                type="number"
-                min={1}
-                className="mt-2 w-24"
-                value={postos}
-                onChange={(e) => setPostos(Number(e.target.value))}
+          <div className="mt-5 border-t pt-5">
+            <Label htmlFor="postos">Pessoas trabalhando ao mesmo tempo</Label>
+            <Input
+              id="postos"
+              type="number"
+              min={1}
+              className="mt-2 w-24"
+              value={postos}
+              onChange={(e) => setPostos(Number(e.target.value))}
+            />
+          </div>
+
+          <fieldset className="mt-5 border-t pt-5">
+            <legend className="float-left mb-3 w-full font-medium">Durante o intervalo de refeição</legend>
+            <div className="clear-both space-y-2 text-sm">
+              <Opcao
+                type="radio"
+                name="intervalo"
+                checked={intervaloCoberto}
+                onChange={() => setIntervaloCoberto(true)}
+                titulo="Outra pessoa assume o posto"
+                detalhe="A empresa nunca fica com menos gente do que o informado acima."
+              />
+              <Opcao
+                type="radio"
+                name="intervalo"
+                checked={!intervaloCoberto}
+                onChange={() => setIntervaloCoberto(false)}
+                titulo="O posto fica vago"
+                detalhe="A empresa fecha para o almoço, ou o dono cobre."
               />
             </div>
-            <label className="flex max-w-xs items-start gap-2 text-sm">
-              <input
-                type="checkbox"
-                className="mt-0.5 size-4 accent-primary"
-                checked={cautelarStf}
-                onChange={(e) => setCautelarStf(e.target.checked)}
-              />
-              <span>
-                Permitir jornada de 8h24 na fase de 42h
-                <span className="block text-muted-foreground">
-                  Liminar do STF, ainda pendente de julgamento no plenário.
-                </span>
-              </span>
-            </label>
+          </fieldset>
+
+          {dias[0] && (
+            <fieldset className="mt-5 border-t pt-5">
+              <legend className="float-left mb-3 w-full font-medium">Folga aos domingos</legend>
+              <div className="clear-both space-y-2 text-sm">
+                <Opcao
+                  type="radio"
+                  name="domingo"
+                  checked={folgaDomingoACada === 3}
+                  onChange={() => setFolgaDomingoACada(3)}
+                  titulo="1 domingo de folga a cada 3 semanas"
+                  detalhe="Regra do comércio em geral (Lei 10.101/2000)."
+                />
+                <Opcao
+                  type="radio"
+                  name="domingo"
+                  checked={folgaDomingoACada === 2}
+                  onChange={() => setFolgaDomingoACada(2)}
+                  titulo="1 domingo de folga a cada 2 semanas"
+                  detalhe="Exigido para mulheres (CLT, art. 386), segundo o TST."
+                />
+              </div>
+            </fieldset>
+          )}
+
+          <div className="mt-5 space-y-2 border-t pt-5 text-sm">
+            <Opcao
+              type="checkbox"
+              checked={cobrirFerias}
+              onChange={() => setCobrirFerias(!cobrirFerias)}
+              titulo="Cobrir férias com a própria equipe"
+              detalhe="Soma quem substitui os colegas nos 30 dias de férias de cada um."
+            />
+            <Opcao
+              type="checkbox"
+              checked={cautelarStf}
+              onChange={() => setCautelarStf(!cautelarStf)}
+              titulo="Permitir jornada de 8h24 na fase de 42h"
+              detalhe="Liminar do STF, ainda pendente de julgamento no plenário."
+            />
           </div>
         </section>
 
@@ -131,6 +197,7 @@ export default function Home() {
               {final.minimo === 1 ? "funcionário CLT, no mínimo" : "funcionários CLT, no mínimo"}
             </p>
             <p className="mt-4 border-t border-primary-foreground/20 pt-4 text-sm opacity-90">
+              {final.paraFerias > 0 && `${final.emOperacao} em operação e ${final.paraFerias} para cobrir férias. `}
               {diferenca > 0
                 ? `${diferenca} a mais do que na regra antiga (${antes.minimo}).`
                 : "O mesmo número da regra antiga."}{" "}
@@ -158,8 +225,8 @@ export default function Home() {
           </ol>
 
           <p className="text-sm text-muted-foreground">
-            Cobertura de {horas(final.coberturaMin)} por semana. É um piso, sem horas extras: não considera
-            a cobertura do intervalo de refeição, férias, faltas nem as regras de folga aos domingos.
+            {horas(final.coberturaMin)} de trabalho por semana. É um piso, sem horas extras: não monta a
+            escala e não considera faltas, feriados nem afastamentos.
           </p>
         </aside>
       </div>

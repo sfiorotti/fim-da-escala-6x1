@@ -191,6 +191,22 @@ Convenção/acordo coletivo prevalece sobre a lei em jornada (dentro dos limites
 
 O art. 64 da CLT manda dividir o salário mensal por 30 vezes a jornada diária; os divisores usados na prática vêm da jurisprudência: 220 para 44h e **200 para 40h** (Súmula 431 do TST). Para a fase de 42h, o divisor **210** é a extrapolação adotada pelos escritórios, ainda sem norma. Com salário mantido, o valor da hora normal e da hora extra **sobe**. A cautelar não tratou do divisor; o decreto anunciado pelo governo (com tabelas de divisores) não tinha sido publicado até 14/11/2026.
 
+### 5.10 Férias
+
+*Conferido no texto compilado da CLT no Planalto em 15/11/2026.*
+
+| Regra | Base |
+|---|---|
+| A cada 12 meses de contrato: 30 dias corridos de férias (24, 18 ou 12 dias conforme as faltas injustificadas, a partir da 6ª) | CLT, arts. 129 e 130 |
+| Concedidas nos 12 meses seguintes à aquisição do direito; fora do prazo, pagas em dobro | CLT, arts. 134 e 137 |
+| Com concordância do empregado, em até 3 períodos: um de pelo menos 14 dias, os demais de pelo menos 5 | CLT, art. 134, § 1º |
+| Não podem começar nos 2 dias que antecedem feriado ou repouso semanal | CLT, art. 134, § 3º |
+| Quem escolhe a época é o empregador | CLT, art. 136 |
+| Férias coletivas: toda a empresa ou setores, em até 2 períodos por ano, nenhum menor que 10 dias | CLT, art. 139 |
+| O empregado pode converter 1/3 das férias em dinheiro | CLT, art. 143 |
+
+A Lei 15.371/2026 acrescenta ao art. 134, a partir de 01/01/2027, o direito de emendar férias à licença-paternidade.
+
 ---
 
 ## 6. Micro e pequenos empregadores
@@ -218,6 +234,17 @@ Derivadas das seções acima. Cada uma deve ser parametrizada por **data de vig�
 9. Feriados: checar convenção coletiva e lei municipal.
 10. Salário e piso nunca reduzidos por causa da nova jornada.
 11. Quem já faz ≤ 40h: jornada não muda, mas ganha o segundo repouso.
+12. Férias: 30 dias por ano para cada funcionário, concedidas dentro de 12 meses.
+
+### O que o cálculo de dimensionamento já considera
+
+O cálculo em `src/regras/dimensionamento.ts` devolve um piso de funcionários, sem montar a escala. Ele aplica as regras 1, 2, 3, 6 e 12, e o intervalo de refeição da regra 7, com estas simplificações:
+
+- **Intervalo de refeição.** Ou outra pessoa assume o posto (então qualquer dia com mais de 6h de funcionamento exige um substituto presente), ou o posto fica vago e o intervalo não é trabalhado. A pausa de 15 minutos das jornadas de 4h a 6h só é descontada no segundo caso.
+- **Domingos.** Cada funcionário trabalha no máximo 2 de cada 3 domingos (comércio) ou 1 de cada 2 (art. 386), valendo a mesma regra para toda a equipe. Setores fora do comércio não têm regra própria no cálculo.
+- **Férias.** Considera 30 dias por ano por funcionário, escalonados, e soma à equipe quem os cobre. Não considera férias coletivas, fracionamento nem venda de 1/3.
+
+Ficam de fora: interjornada, limite de dias consecutivos, feriados, faltas e afastamentos.
 
 ---
 
